@@ -6,6 +6,7 @@ from werkzeug.utils import secure_filename
 import PyPDF2
 import docx
 from typing import List, Dict, Tuple
+from pii_patterns import PII_PATTERNS
 
 app = Flask(__name__)
 CORS(app)
@@ -64,49 +65,7 @@ def extract_text(file_path: str, file_type: str) -> str:
     else:
         raise ValueError(f"Unsupported file type: {file_type}")
 
-# PII Detection Patterns
-PII_PATTERNS = {
-    'email': {
-        'pattern': r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',
-        'name': 'Email Address',
-        'description': 'Email addresses'
-    },
-    'ssn': {
-        'pattern': r'\b\d{3}-?\d{2}-?\d{4}\b',
-        'name': 'Social Security Number',
-        'description': 'SSN (XXX-XX-XXXX or XXXXXXXXX)'
-    },
-    'credit_card': {
-        'pattern': r'\b(?:\d{4}[-\s]?){3}\d{4}\b',
-        'name': 'Credit Card Number',
-        'description': 'Credit card numbers'
-    },
-    'phone_us': {
-        'pattern': r'\b(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b',
-        'name': 'US Phone Number',
-        'description': 'US phone numbers'
-    },
-    'ip_address': {
-        'pattern': r'\b(?:\d{1,3}\.){3}\d{1,3}\b',
-        'name': 'IP Address',
-        'description': 'IP addresses'
-    },
-    'date_of_birth': {
-        'pattern': r'\b(?:\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2},?\s+\d{4})\b',
-        'name': 'Date of Birth',
-        'description': 'Dates that might be DOB'
-    },
-    'passport': {
-        'pattern': r'\b[A-Z]{1,2}\d{6,9}\b',
-        'name': 'Passport Number',
-        'description': 'Passport numbers'
-    },
-    'driver_license': {
-        'pattern': r'\b[A-Z]{1,2}\d{6,8}\b',
-        'name': 'Driver License',
-        'description': 'Driver license numbers'
-    }
-}
+# PII Detection Patterns are imported from pii_patterns module
 
 def detect_pii(text: str) -> Dict:
     """Detect PII in text and return findings."""
