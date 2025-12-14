@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Political Bias Analyzer</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Political Bias Analyzer</h1>
+        
+        <div class="input-group">
+            <input 
+                type="text" 
+                id="apiKeyInput" 
+                placeholder="OpenAI API Key (required)"
+                autocomplete="off"
+            >
+        </div>
+        <div class="input-group">
+            <input 
+                type="url" 
+                id="urlInput" 
+                placeholder="Paste URL here (e.g., https://example.com/article)"
+                autocomplete="off"
+            >
+        </div>
+        <div class="button-group">
+            <button id="analyzeBtn">Analyze</button>
+            <button id="resetBtn">Reset</button>
+        </div>
+        
+        <div class="gal-tan-info">
+            <div class="gal-tan-header">
+                <h2>
+                    <span class="info-icon">ℹ️</span>
+                    About the GAL-TAN Scale
+                </h2>
+            </div>
+            <div class="gal-tan-content">
+                <p class="gal-tan-subtitle">Understanding the Green/Alternative/Libertarian vs Traditional/Authoritarian/Nationalist political spectrum.</p>
+                
+                <div class="gal-tan-sections">
+                    <div class="spectrum-section gal-section">
+                        <div class="section-header">
+                            <span class="spectrum-dot gal-dot"></span>
+                            <h3>GAL (Green/Alternative/Libertarian)</h3>
+                        </div>
+                        <p class="section-description">Positions that emphasize environmental protection, alternative lifestyles, individual freedoms, and progressive social values.</p>
+                        <div class="characteristics">
+                            <span class="characteristic-tag gal-tag">Environmental protection</span>
+                            <span class="characteristic-tag gal-tag">Social liberalism</span>
+                            <span class="characteristic-tag gal-tag">Individual rights</span>
+                            <span class="characteristic-tag gal-tag">Multiculturalism</span>
+                            <span class="characteristic-tag gal-tag">Progressive values</span>
+                        </div>
+                    </div>
+
+                    <div class="spectrum-section tan-section">
+                        <div class="section-header">
+                            <span class="spectrum-dot tan-dot"></span>
+                            <h3>TAN (Traditional/Authoritarian/Nationalist)</h3>
+                        </div>
+                        <p class="section-description">Positions that emphasize traditional values, strong authority, national identity, and conventional social structures.</p>
+                        <div class="characteristics">
+                            <span class="characteristic-tag tan-tag">Traditional values</span>
+                            <span class="characteristic-tag tan-tag">National sovereignty</span>
+                            <span class="characteristic-tag tan-tag">Strong authority</span>
+                            <span class="characteristic-tag tan-tag">Cultural preservation</span>
+                            <span class="characteristic-tag tan-tag">Order and stability</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="scale-visualization">
+                    <h3>Scale Visualization</h3>
+                    <div class="scale-bar">
+                        <div class="scale-gradient"></div>
+                        <div class="scale-labels">
+                            <span class="scale-label">-100<br>(Strong GAL)</span>
+                            <span class="scale-label">0<br>(Centrist)</span>
+                            <span class="scale-label">+100<br>(Strong TAN)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="gal-tan-note">
+                    <strong>Note:</strong> This tool analyzes publicly available information about authors' political activities, statements, and affiliations to estimate their position on the GAL-TAN scale. Results are based on algorithmic analysis and should be interpreted as estimates rather than definitive classifications.
+                </div>
+            </div>
+        </div>
+        
+        <div id="results" class="results hidden">
+            <h2>Analysis Results</h2>
+            <div id="loading" class="loading hidden">
+                <div class="spinner"></div>
+                <p>Analyzing article...</p>
+            </div>
+            <div id="authorInfo" class="author-info hidden">
+                <h3>Author Information</h3>
+                <div id="authorContent"></div>
+            </div>
+            <div id="errorMessage" class="error-message hidden"></div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+
