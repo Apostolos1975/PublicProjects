@@ -12,7 +12,7 @@
         
         <div class="input-group">
             <input 
-                type="text" 
+                type="password" 
                 id="apiKeyInput" 
                 placeholder="OpenAI API Key (required)"
                 autocomplete="off"
@@ -32,14 +32,14 @@
         </div>
         
         <div class="gal-tan-info">
-            <div class="gal-tan-header">
+            <div class="gal-tan-header" id="galTanToggle">
                 <h2>
                     <span class="info-icon">ℹ️</span>
                     About the GAL-TAN Scale
+                    <span class="toggle-icon">▼</span>
                 </h2>
             </div>
-            <div class="gal-tan-content">
-                
+            <div class="gal-tan-content collapsed">
                 <div class="gal-tan-sections">
                     <div class="spectrum-section gal-section">
                         <div class="section-header">
@@ -72,20 +72,20 @@
                     </div>
                 </div>
 
-                <div class="scale-visualization">
-                    <h3>Scale Visualization</h3>
-                    <div class="scale-bar">
-                        <div class="scale-gradient"></div>
-                        <div class="scale-labels">
-                            <span class="scale-label">-100<br>(Strong GAL)</span>
-                            <span class="scale-label">0<br>(Centrist)</span>
-                            <span class="scale-label">+100<br>(Strong TAN)</span>
-                        </div>
-                    </div>
-                </div>
-
                 <div class="gal-tan-note">
                     <strong>Note:</strong> This tool analyzes publicly available information about authors' political activities, statements, and affiliations to estimate their position on the GAL-TAN scale. Results are based on algorithmic analysis and should be interpreted as estimates rather than definitive classifications.
+                </div>
+            </div>
+        </div>
+
+        <div class="scale-visualization">
+            <h3>Scale Visualization</h3>
+            <div class="scale-bar">
+                <div class="scale-gradient"></div>
+                <div class="scale-labels">
+                    <span class="scale-label">-100<br>(Strong GAL)</span>
+                    <span class="scale-label">0<br>(Centrist)</span>
+                    <span class="scale-label">+100<br>(Strong TAN)</span>
                 </div>
             </div>
         </div>

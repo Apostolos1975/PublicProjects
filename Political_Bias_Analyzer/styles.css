@@ -210,6 +210,13 @@ button:disabled:hover {
 
 .gal-tan-header {
     padding: 20px;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.2s;
+}
+
+.gal-tan-header:hover {
+    background-color: #e9ecef;
 }
 
 .gal-tan-header h2 {
@@ -221,12 +228,31 @@ button:disabled:hover {
     gap: 10px;
 }
 
+.toggle-icon {
+    margin-left: auto;
+    font-size: 0.8rem;
+    transition: transform 0.3s;
+    color: #666;
+}
+
+.gal-tan-content.collapsed .toggle-icon {
+    transform: rotate(-90deg);
+}
+
 .info-icon {
     font-size: 1.2rem;
 }
 
 .gal-tan-content {
     padding: 0 20px 20px 20px;
+    max-height: 2000px;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out, padding 0.3s ease-out;
+}
+
+.gal-tan-content.collapsed {
+    max-height: 0;
+    padding: 0 20px;
 }
 
 .gal-tan-subtitle {
@@ -321,8 +347,9 @@ button:disabled:hover {
 .scale-visualization {
     margin: 30px 0;
     padding: 20px;
-    background: white;
+    background: #f8f9fa;
     border-radius: 10px;
+    border: 1px solid #e0e0e0;
 }
 
 .scale-visualization h3 {
