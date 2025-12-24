@@ -3,43 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://api.openai.com https://api.allorigins.win https://thingproxy.freeboard.io; object-src 'none'; base-uri 'self';">
     <title>Political Bias Analyzer</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="container">
-        <h1>Political Bias Analyzer</h1>
-        
-        <div class="input-group">
-            <input 
-                type="password" 
-                id="apiKeyInput" 
-                placeholder="OpenAI API Key (required)"
-                autocomplete="off"
-            >
-        </div>
-        <div class="input-group">
-            <input 
-                type="url" 
-                id="urlInput" 
-                placeholder="Paste URL here (e.g., https://example.com/article)"
-                autocomplete="off"
-            >
-        </div>
-        <div class="button-group">
-            <button id="analyzeBtn">Analyze</button>
-            <button id="resetBtn">Reset</button>
-        </div>
-        
-        <div class="gal-tan-info">
-            <div class="gal-tan-header" id="galTanToggle">
-                <h2>
-                    <span class="info-icon">ℹ️</span>
-                    About the GAL-TAN Scale
-                    <span class="toggle-icon">▼</span>
-                </h2>
-            </div>
-            <div class="gal-tan-content collapsed">
+        <div class="info-icon-wrapper">
+            <span class="info-icon-hover">ℹ️</span>
+            <div class="info-popup">
                 <div class="gal-tan-sections">
                     <div class="spectrum-section gal-section">
                         <div class="section-header">
@@ -78,15 +50,60 @@
             </div>
         </div>
 
+        <div class="settings-icon-wrapper">
+            <span class="settings-icon" id="settingsIcon">⚙️</span>
+        </div>
+
+        <!-- Settings Popup Modal -->
+        <div class="settings-modal" id="settingsModal">
+            <div class="settings-modal-content">
+                <div class="settings-modal-header">
+                    <h2>ChatGPT Settings</h2>
+                    <button class="settings-close-btn" id="settingsCloseBtn">×</button>
+                </div>
+                <div class="settings-modal-body">
+                    <div class="input-group">
+                        <label for="apiKeyInput">OpenAI API Key</label>
+                        <input 
+                            type="password" 
+                            id="apiKeyInput" 
+                            placeholder="Enter your OpenAI API key"
+                            autocomplete="off"
+                        >
+                    </div>
+                    <div class="settings-buttons">
+                        <button class="settings-btn settings-clean-btn" id="cleanKeyBtn">Clean Key</button>
+                        <button class="settings-btn settings-update-btn" id="updateKeyBtn">Update Key</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <h1>Political Bias Analyzer</h1>
+        
+        <div class="input-group">
+            <input 
+                type="url" 
+                id="urlInput" 
+                placeholder="Paste URL here (e.g., https://example.com/article)"
+                autocomplete="off"
+            >
+        </div>
+        <div class="button-group">
+            <button id="analyzeBtn">Analyze</button>
+            <button id="resetBtn">Reset</button>
+            <button id="historyBtn">History</button>
+        </div>
+        
         <div class="scale-visualization">
             <h3>Scale Visualization</h3>
             <div class="scale-bar">
                 <div class="scale-gradient"></div>
-                <div class="scale-labels">
-                    <span class="scale-label">-100<br>(Strong GAL)</span>
-                    <span class="scale-label">0<br>(Centrist)</span>
-                    <span class="scale-label">+100<br>(Strong TAN)</span>
-                </div>
+            </div>
+            <div class="scale-labels">
+                <span class="scale-label">-100<br>(Strong GAL)</span>
+                <span class="scale-label">0<br>(Centrist)</span>
+                <span class="scale-label">+100<br>(Strong TAN)</span>
             </div>
         </div>
         

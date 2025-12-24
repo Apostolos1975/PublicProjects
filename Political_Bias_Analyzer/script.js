@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const urlInput = document.getElementById('urlInput');
     const analyzeBtn = document.getElementById('analyzeBtn');
     const resetBtn = document.getElementById('resetBtn');
+    const historyBtn = document.getElementById('historyBtn');
     const results = document.getElementById('results');
     const loading = document.getElementById('loading');
     const articleContent = document.getElementById('articleContent');
@@ -12,14 +13,89 @@ document.addEventListener('DOMContentLoaded', () => {
     const authorInfo = document.getElementById('authorInfo');
     const authorContent = document.getElementById('authorContent');
     const errorMessage = document.getElementById('errorMessage');
-    const galTanToggle = document.getElementById('galTanToggle');
-    const galTanContent = document.querySelector('.gal-tan-content');
+    const settingsIcon = document.getElementById('settingsIcon');
+    const settingsModal = document.getElementById('settingsModal');
+    const settingsCloseBtn = document.getElementById('settingsCloseBtn');
+    const cleanKeyBtn = document.getElementById('cleanKeyBtn');
+    const updateKeyBtn = document.getElementById('updateKeyBtn');
 
-    // Toggle GAL-TAN info section
-    if (galTanToggle && galTanContent) {
-        galTanToggle.addEventListener('click', () => {
-            galTanContent.classList.toggle('collapsed');
+    // Settings modal functionality
+    settingsIcon.addEventListener('click', () => {
+        settingsModal.classList.add('show');
+    });
+
+    settingsCloseBtn.addEventListener('click', () => {
+        settingsModal.classList.remove('show');
+    });
+
+    // Close modal when clicking outside of it
+    settingsModal.addEventListener('click', (e) => {
+        if (e.target === settingsModal) {
+            settingsModal.classList.remove('show');
+        }
+    });
+
+    // Close modal with Escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && settingsModal.classList.contains('show')) {
+            settingsModal.classList.remove('show');
+        }
+    });
+
+    // Clean and Update key button event listeners
+    cleanKeyBtn.addEventListener('click', () => {
+        if (confirm('Are you sure you want to clean the API key? This will remove it from storage.')) {
+            cleanApiKey();
+        }
+    });
+
+    updateKeyBtn.addEventListener('click', () => {
+        updateApiKey();
+    });
+
+    // XSS Protection: Function to escape HTML entities
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // XSS Protection: Safe function to set text content (creates elements safely)
+    function safeSetAuthorContent(authors) {
+        // Clear existing content safely
+        while (authorContent.firstChild) {
+            authorContent.removeChild(authorContent.firstChild);
+        }
+        
+        // Create paragraph for label
+        const labelP = document.createElement('p');
+        const strong = document.createElement('strong');
+        strong.textContent = 'Author(s):';
+        labelP.appendChild(strong);
+        authorContent.appendChild(labelP);
+        
+        // Create unordered list
+        const ul = document.createElement('ul');
+        authors.forEach(author => {
+            const li = document.createElement('li');
+            li.textContent = author; // textContent automatically escapes HTML
+            ul.appendChild(li);
         });
+        authorContent.appendChild(ul);
+    }
+
+    // XSS Protection: Validate and sanitize URL
+    function validateUrl(url) {
+        try {
+            const urlObj = new URL(url);
+            // Only allow http and https protocols
+            if (!['http:', 'https:'].includes(urlObj.protocol)) {
+                throw new Error('Invalid protocol. Only http and https are allowed.');
+            }
+            return url.trim();
+        } catch (e) {
+            throw new Error('Invalid URL format. Please enter a valid URL.');
+        }
     }
 
     // Storage utility functions with localStorage and cookie fallback
@@ -35,6 +111,31 @@ document.addEventListener('DOMContentLoaded', () => {
         const expirationDate = new Date();
         expirationDate.setFullYear(expirationDate.getFullYear() + 1);
         document.cookie = `openaiApiKey=${encodeURIComponent(apiKey)}; expires=${expirationDate.toUTCString()}; path=/; SameSite=Strict`;
+    }
+
+    function cleanApiKey() {
+        // Remove from localStorage
+        try {
+            localStorage.removeItem('openaiApiKey');
+        } catch (e) {
+            console.warn('localStorage not available');
+        }
+        
+        // Remove from cookie by setting expiration date in the past
+        document.cookie = `openaiApiKey=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Strict`;
+        
+        // Clear the input field
+        apiKeyInput.value = '';
+    }
+
+    function updateApiKey() {
+        const apiKey = apiKeyInput.value.trim();
+        if (apiKey) {
+            setApiKey(apiKey);
+            alert('API key updated successfully!');
+        } else {
+            alert('Please enter an API key before updating.');
+        }
     }
 
     function getApiKey() {
@@ -220,9 +321,14 @@ document.addEventListener('DOMContentLoaded', () => {
             // Hide loading, show results
             loading.classList.add('hidden');
 
-            // Parse and display authors
+            // Parse and display authors (XSS-safe)
             if (authorsText.toUpperCase().includes('N/A')) {
-                authorContent.innerHTML = '<p>No authors identified.</p>';
+                while (authorContent.firstChild) {
+                    authorContent.removeChild(authorContent.firstChild);
+                }
+                const p = document.createElement('p');
+                p.textContent = 'No authors identified.';
+                authorContent.appendChild(p);
             } else {
                 // Split by common delimiters and clean up
                 const authors = authorsText
@@ -234,14 +340,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     .filter(name => name.length > 0);
 
                 if (authors.length > 0) {
-                    authorContent.innerHTML = `
-                        <p><strong>Author(s):</strong></p>
-                        <ul>
-                            ${authors.map(author => `<li>${author}</li>`).join('')}
-                        </ul>
-                    `;
+                    safeSetAuthorContent(authors);
                 } else {
-                    authorContent.innerHTML = '<p>No authors identified.</p>';
+                    while (authorContent.firstChild) {
+                        authorContent.removeChild(authorContent.firstChild);
+                    }
+                    const p = document.createElement('p');
+                    p.textContent = 'No authors identified.';
+                    authorContent.appendChild(p);
                 }
             }
 
@@ -274,8 +380,16 @@ document.addEventListener('DOMContentLoaded', () => {
             urlInput.focus();
             return;
         }
-        
-        analyzeArticle(url, apiKey);
+
+        // Validate URL (XSS protection)
+        try {
+            const validatedUrl = validateUrl(url);
+            analyzeArticle(validatedUrl, apiKey);
+        } catch (error) {
+            errorMessage.textContent = error.message;
+            errorMessage.classList.remove('hidden');
+            results.classList.remove('hidden');
+        }
     });
 
     // Reset button event listener
@@ -287,6 +401,11 @@ document.addEventListener('DOMContentLoaded', () => {
         authorInfo.classList.add('hidden');
         errorMessage.classList.add('hidden');
         urlInput.focus();
+    });
+
+    // History button event listener (functionality to be defined later)
+    historyBtn.addEventListener('click', () => {
+        // TODO: Implement history functionality
     });
 
     // Allow Enter key to trigger Analyze
