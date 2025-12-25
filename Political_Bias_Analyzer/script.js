@@ -3,16 +3,20 @@ document.addEventListener('DOMContentLoaded', () => {
     // Get DOM elements
     const apiKeyInput = document.getElementById('apiKeyInput');
     const urlInput = document.getElementById('urlInput');
+    const authorsInput = document.getElementById('authorsInput');
     const analyzeBtn = document.getElementById('analyzeBtn');
     const resetBtn = document.getElementById('resetBtn');
     const historyBtn = document.getElementById('historyBtn');
     const results = document.getElementById('results');
     const loading = document.getElementById('loading');
-    const articleContent = document.getElementById('articleContent');
-    const articleText = document.getElementById('articleText');
     const authorInfo = document.getElementById('authorInfo');
     const authorContent = document.getElementById('authorContent');
     const errorMessage = document.getElementById('errorMessage');
+    const scaleMarkers = document.getElementById('scaleMarkers');
+    const legendItems = document.getElementById('legendItems');
+
+    // Persistent storage for authors (session-based, cleared on reset)
+    let storedAuthors = [];
     const settingsIcon = document.getElementById('settingsIcon');
     const settingsModal = document.getElementById('settingsModal');
     const settingsCloseBtn = document.getElementById('settingsCloseBtn');
@@ -82,6 +86,54 @@ document.addEventListener('DOMContentLoaded', () => {
             ul.appendChild(li);
         });
         authorContent.appendChild(ul);
+    }
+
+    // XSS Protection: Safe function to set author content with political alignment
+    function safeSetAuthorContentWithAlignment(authorsWithAlignment) {
+        // Clear existing content safely
+        while (authorContent.firstChild) {
+            authorContent.removeChild(authorContent.firstChild);
+        }
+        
+        // Create paragraph for label
+        const labelP = document.createElement('p');
+        const strong = document.createElement('strong');
+        strong.textContent = 'Author(s):';
+        labelP.appendChild(strong);
+        authorContent.appendChild(labelP);
+        
+        // Create container for authors
+        authorsWithAlignment.forEach(({ name, alignment }) => {
+            const authorDiv = document.createElement('div');
+            authorDiv.style.marginBottom = '20px';
+            authorDiv.style.padding = '15px';
+            authorDiv.style.background = 'white';
+            authorDiv.style.borderRadius = '8px';
+            authorDiv.style.borderLeft = '4px solid #667eea';
+            
+            // Author name
+            const nameP = document.createElement('p');
+            nameP.style.fontWeight = '600';
+            nameP.style.marginBottom = '10px';
+            nameP.style.color = '#333';
+            nameP.style.fontSize = '16px';
+            nameP.textContent = name;
+            authorDiv.appendChild(nameP);
+            
+            // Political alignment
+            const alignmentDiv = document.createElement('div');
+            alignmentDiv.style.marginTop = '10px';
+            alignmentDiv.style.padding = '10px';
+            alignmentDiv.style.background = '#f8f9fa';
+            alignmentDiv.style.borderRadius = '5px';
+            alignmentDiv.style.fontSize = '14px';
+            alignmentDiv.style.color = '#555';
+            alignmentDiv.style.whiteSpace = 'pre-wrap';
+            alignmentDiv.textContent = alignment || 'Analysis unavailable';
+            authorDiv.appendChild(alignmentDiv);
+            
+            authorContent.appendChild(authorDiv);
+        });
     }
 
     // XSS Protection: Validate and sanitize URL
@@ -163,6 +215,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (storedApiKey) {
         apiKeyInput.value = storedApiKey;
     }
+
+    // Initialize scale visualization (empty on load)
+    updateScaleVisualization();
 
     // Save API key when it changes (on blur)
     apiKeyInput.addEventListener('blur', () => {
@@ -276,7 +331,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         content: `Identify the author or authors of this article and return their names in a list. Return just their names. Nothing more. If you cannot identify any authors, return an N/A.\n\nArticle text:\n${limitedText}`
                     }
                 ],
-                temperature: 0.3,
+                temperature: 0.1,
                 max_tokens: 200
             })
         });
@@ -290,12 +345,278 @@ document.addEventListener('DOMContentLoaded', () => {
         return data.choices[0].message.content.trim();
     }
 
+    // Function to get political alignment for a person
+    async function getPoliticalAlignment(fullName, articleText, apiKey) {
+        // Limit article text to avoid token limits (first 4000 characters for context)
+        const limitedArticleText = articleText ? articleText.substring(0, 4000) : '';
+        
+        const prompt = `You are an analyst tasked with identifying the political affiliation or political alignment of a person.
+
+Person: ${fullName}
+
+${limitedArticleText ? `Article context:
+The following is an article written by or associated with this person. Consider this material as part of your analysis:
+
+${limitedArticleText}
+
+---` : ''}
+
+Instructions:
+* First determine whether the person is a public figure.
+** If the person is not clearly a public figure, state that political affiliation cannot be reliably determined and stop.
+* If the person is a public figure:
+** Identify any formal political affiliation (party membership, elected office, official role).
+** If no formal affiliation exists, assess political alignment or ideological leaning based on:
+*** public statements
+*** published writings (including the article text provided above, if available)
+*** leadership or editorial roles
+*** documented associations
+*** the content and tone of the article text provided above, if available
+* Do not guess.
+** If evidence is insufficient or mixed, explicitly state that.
+** Only use publicly available information. Do not infer private beliefs.
+* Separate facts from interpretation.
+${limitedArticleText ? '* Consider the article text provided above as additional context for understanding the person\'s political alignment.' : ''}
+
+Output format:
+
+* Political alignment / leaning:
+
+(e.g., left-leaning, conservative, liberal, social democratic, etc., or "unclear")
+
+* Confidence level:
+
+High / Medium / Low
+
+* GAL-TAN Score:
+
+Provide a numerical score from -100 to +100 on the GAL-TAN scale where:
+- -100 represents strong GAL (Green/Alternative/Libertarian) positions
+- 0 represents centrist/moderate positions
+- +100 represents strong TAN (Traditional/Authoritarian/Nationalist) positions
+
+Format: Score: [number between -100 and 100]`;
+
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+                model: 'gpt-3.5-turbo',
+                messages: [
+                    {
+                        role: 'user',
+                        content: prompt
+                    }
+                ],
+                temperature: 0.1,
+                max_tokens: 600
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error?.message || `API error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data.choices[0].message.content.trim();
+    }
+
+    // Function to parse GAL-TAN score from ChatGPT response
+    function parseGALTanScore(responseText) {
+        // Try to find score in format "Score: [number]" or similar patterns
+        const scoreMatch = responseText.match(/Score:\s*(-?\d+)/i) || 
+                          responseText.match(/GAL-TAN Score:\s*(-?\d+)/i) ||
+                          responseText.match(/(-?\d+)\s*(?:out of 100|on the scale)/i);
+        
+        if (scoreMatch) {
+            const score = parseInt(scoreMatch[1], 10);
+            // Clamp score to valid range
+            return Math.max(-100, Math.min(100, score));
+        }
+        
+        // Try to infer score from alignment description
+        const text = responseText.toLowerCase();
+        if (text.includes('unclear') || text.includes('cannot be determined') || text.includes('insufficient')) {
+            return null; // Unable to determine
+        }
+        
+        // Rough estimation based on keywords (fallback if no explicit score)
+        if (text.includes('strong gal') || text.includes('strongly left') || text.includes('green') || text.includes('libertarian left')) {
+            return -80;
+        } else if (text.includes('gal') || text.includes('left-leaning') || text.includes('progressive') || text.includes('liberal')) {
+            return -50;
+        } else if (text.includes('centrist') || text.includes('moderate') || text.includes('center')) {
+            return 0;
+        } else if (text.includes('tan') || text.includes('right-leaning') || text.includes('conservative') || text.includes('traditional')) {
+            return 50;
+        } else if (text.includes('strong tan') || text.includes('strongly right') || text.includes('authoritarian') || text.includes('nationalist')) {
+            return 80;
+        }
+        
+        return null; // Unable to determine
+    }
+
+    // Function to extract marker color (different color for each author)
+    function getMarkerColor(index) {
+        const colors = [
+            '#ef4444', // red
+            '#3b82f6', // blue
+            '#10b981', // green
+            '#f59e0b', // amber
+            '#8b5cf6', // purple
+            '#ec4899', // pink
+            '#06b6d4', // cyan
+            '#f97316', // orange
+            '#6366f1', // indigo
+            '#14b8a6'  // teal
+        ];
+        return colors[index % colors.length];
+    }
+
+    // Function to update scale visualization with markers
+    function updateScaleVisualization() {
+        // Clear existing markers
+        while (scaleMarkers.firstChild) {
+            scaleMarkers.removeChild(scaleMarkers.firstChild);
+        }
+        
+        // Clear existing legend items
+        while (legendItems.firstChild) {
+            legendItems.removeChild(legendItems.firstChild);
+        }
+
+        // Add markers and legend items for each stored author
+        storedAuthors.forEach((author, index) => {
+            if (author.score === null || author.score === undefined) return;
+            
+            // Calculate position percentage (0 to 100, where 0 = -100, 100 = +100)
+            const positionPercent = ((author.score + 100) / 200) * 100;
+            
+            // Create marker
+            const marker = document.createElement('div');
+            marker.className = 'scale-marker';
+            marker.style.left = `${positionPercent}%`;
+            marker.style.borderTopColor = getMarkerColor(index);
+            
+            // Create marker label (author name initial or short form)
+            const markerLabel = document.createElement('div');
+            markerLabel.className = 'scale-marker-label';
+            markerLabel.textContent = author.name.split(' ').map(n => n[0]).join('').substring(0, 3);
+            markerLabel.style.color = getMarkerColor(index);
+            marker.appendChild(markerLabel);
+            
+            scaleMarkers.appendChild(marker);
+            
+            // Create legend item
+            const legendItem = document.createElement('div');
+            legendItem.className = 'legend-item';
+            
+            const legendMarker = document.createElement('div');
+            legendMarker.className = 'legend-marker';
+            legendMarker.style.borderTopColor = getMarkerColor(index);
+            
+            const legendName = document.createElement('div');
+            legendName.className = 'legend-name';
+            legendName.textContent = author.name;
+            
+            legendItem.appendChild(legendMarker);
+            legendItem.appendChild(legendName);
+            legendItems.appendChild(legendItem);
+        });
+    }
+
+    // Function to analyze authors directly (without article)
+    async function analyzeAuthors(authorsText, apiKey) {
+        // Show loading state
+        results.classList.remove('hidden');
+        loading.classList.remove('hidden');
+        authorInfo.classList.add('hidden');
+        errorMessage.classList.add('hidden');
+        analyzeBtn.disabled = true;
+
+        try {
+            // Parse author names from input
+            const authors = authorsText
+                .split(/[,\n\r]/)
+                .map(line => line.trim())
+                .filter(line => line.length > 0);
+
+            if (authors.length === 0) {
+                throw new Error('No valid author names found. Please enter author names separated by commas or new lines.');
+            }
+
+            // Query political alignment for each author (without article text)
+            const loadingTextElement = loading.querySelector('p');
+            const originalLoadingText = loadingTextElement.textContent;
+            loadingTextElement.textContent = 'Analyzing political alignment...';
+            const authorsWithAlignment = [];
+            
+            for (const authorName of authors) {
+                try {
+                    // Pass null for articleText since we don't have an article
+                    const alignment = await getPoliticalAlignment(authorName, null, apiKey);
+                    const score = parseGALTanScore(alignment);
+                    
+                    authorsWithAlignment.push({ 
+                        name: authorName, 
+                        alignment: alignment,
+                        score: score
+                    });
+                    
+                    // Store author in persistent array (avoid duplicates by name)
+                    const existingIndex = storedAuthors.findIndex(a => 
+                        a.name.toLowerCase().trim() === authorName.toLowerCase().trim()
+                    );
+                    if (existingIndex === -1) {
+                        storedAuthors.push({
+                            name: authorName,
+                            alignment: alignment,
+                            score: score
+                        });
+                    } else {
+                        // Update existing author with new data
+                        storedAuthors[existingIndex] = {
+                            name: authorName,
+                            alignment: alignment,
+                            score: score
+                        };
+                    }
+                } catch (error) {
+                    console.error(`Error getting alignment for ${authorName}:`, error);
+                    authorsWithAlignment.push({ 
+                        name: authorName, 
+                        alignment: `Error retrieving political alignment: ${error.message}`,
+                        score: null
+                    });
+                }
+            }
+            
+            // Update scale visualization with all stored authors
+            updateScaleVisualization();
+            
+            // Restore original loading text and hide loading, show results
+            loadingTextElement.textContent = originalLoadingText;
+            loading.classList.add('hidden');
+            safeSetAuthorContentWithAlignment(authorsWithAlignment);
+            authorInfo.classList.remove('hidden');
+        } catch (error) {
+            loading.classList.add('hidden');
+            errorMessage.textContent = `Error analyzing authors: ${error.message}. Please check the names and API key, then try again.`;
+            errorMessage.classList.remove('hidden');
+        } finally {
+            analyzeBtn.disabled = false;
+        }
+    }
+
     // Function to analyze article
     async function analyzeArticle(url, apiKey) {
         // Show loading state
         results.classList.remove('hidden');
         loading.classList.remove('hidden');
-        articleContent.classList.add('hidden');
         authorInfo.classList.add('hidden');
         errorMessage.classList.add('hidden');
         analyzeBtn.disabled = true;
@@ -318,11 +639,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // Identify authors using ChatGPT with the article text
             const authorsText = await identifyAuthors(articleTextContent, apiKey);
 
-            // Hide loading, show results
-            loading.classList.add('hidden');
-
             // Parse and display authors (XSS-safe)
             if (authorsText.toUpperCase().includes('N/A')) {
+                // Hide loading, show results
+                loading.classList.add('hidden');
                 while (authorContent.firstChild) {
                     authorContent.removeChild(authorContent.firstChild);
                 }
@@ -340,8 +660,62 @@ document.addEventListener('DOMContentLoaded', () => {
                     .filter(name => name.length > 0);
 
                 if (authors.length > 0) {
-                    safeSetAuthorContent(authors);
+                    // Query political alignment for each author
+                    const loadingTextElement = loading.querySelector('p');
+                    const originalLoadingText = loadingTextElement.textContent;
+                    loadingTextElement.textContent = 'Analyzing political alignment...';
+                    const authorsWithAlignment = [];
+                    
+                    for (const authorName of authors) {
+                        try {
+                            // Pass article text for context
+                            const alignment = await getPoliticalAlignment(authorName, articleTextContent, apiKey);
+                            const score = parseGALTanScore(alignment);
+                            
+                            authorsWithAlignment.push({ 
+                                name: authorName, 
+                                alignment: alignment,
+                                score: score
+                            });
+                            
+                            // Store author in persistent array (avoid duplicates by name)
+                            const existingIndex = storedAuthors.findIndex(a => 
+                                a.name.toLowerCase().trim() === authorName.toLowerCase().trim()
+                            );
+                            if (existingIndex === -1) {
+                                storedAuthors.push({
+                                    name: authorName,
+                                    alignment: alignment,
+                                    score: score
+                                });
+                            } else {
+                                // Update existing author with new data
+                                storedAuthors[existingIndex] = {
+                                    name: authorName,
+                                    alignment: alignment,
+                                    score: score
+                                };
+                            }
+                        } catch (error) {
+                            console.error(`Error getting alignment for ${authorName}:`, error);
+                            authorsWithAlignment.push({ 
+                                name: authorName, 
+                                alignment: `Error retrieving political alignment: ${error.message}`,
+                                score: null
+                            });
+                        }
+                    }
+                    
+                    // Update scale visualization with all stored authors
+                    updateScaleVisualization();
+                    
+                    // Restore original loading text and hide loading, show results
+                    loadingTextElement.textContent = originalLoadingText;
+                    loading.classList.add('hidden');
+                    safeSetAuthorContentWithAlignment(authorsWithAlignment);
                 } else {
+                    // Hide loading, show results
+                    loading.classList.add('hidden');
                     while (authorContent.firstChild) {
                         authorContent.removeChild(authorContent.firstChild);
                     }
@@ -361,10 +735,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Clear URL when authors are manually entered
+    authorsInput.addEventListener('input', () => {
+        if (authorsInput.value.trim().length > 0) {
+            urlInput.value = '';
+        }
+    });
+
     // Analyze button event listener
     analyzeBtn.addEventListener('click', () => {
         const apiKey = apiKeyInput.value.trim();
         const url = urlInput.value.trim();
+        const authorsText = authorsInput.value.trim();
         
         if (!apiKey) {
             alert('Please enter your OpenAI API key.');
@@ -375,31 +757,40 @@ document.addEventListener('DOMContentLoaded', () => {
         // Save API key (localStorage + cookie)
         setApiKey(apiKey);
         
-        if (!url) {
-            alert('Please enter a URL to analyze.');
-            urlInput.focus();
-            return;
-        }
-
-        // Validate URL (XSS protection)
-        try {
-            const validatedUrl = validateUrl(url);
-            analyzeArticle(validatedUrl, apiKey);
-        } catch (error) {
-            errorMessage.textContent = error.message;
-            errorMessage.classList.remove('hidden');
-            results.classList.remove('hidden');
+        // Check if we have manual author names or a URL
+        if (authorsText) {
+            // Process manual author names
+            analyzeAuthors(authorsText, apiKey);
+        } else if (url) {
+            // Validate URL (XSS protection)
+            try {
+                const validatedUrl = validateUrl(url);
+                analyzeArticle(validatedUrl, apiKey);
+            } catch (error) {
+                errorMessage.textContent = error.message;
+                errorMessage.classList.remove('hidden');
+                results.classList.remove('hidden');
+            }
+        } else {
+            alert('Please enter either an article URL or author names to analyze.');
+            if (!url) urlInput.focus();
+            else authorsInput.focus();
         }
     });
 
     // Reset button event listener
     resetBtn.addEventListener('click', () => {
         urlInput.value = '';
+        authorsInput.value = '';
         results.classList.add('hidden');
         loading.classList.add('hidden');
-        articleContent.classList.add('hidden');
         authorInfo.classList.add('hidden');
         errorMessage.classList.add('hidden');
+        
+        // Clear stored authors and update visualization
+        storedAuthors = [];
+        updateScaleVisualization();
+        
         urlInput.focus();
     });
 

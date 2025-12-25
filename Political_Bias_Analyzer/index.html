@@ -81,29 +81,54 @@
 
         <h1>Political Bias Analyzer</h1>
         
-        <div class="input-group">
-            <input 
-                type="url" 
-                id="urlInput" 
-                placeholder="Paste URL here (e.g., https://example.com/article)"
-                autocomplete="off"
-            >
-        </div>
-        <div class="button-group">
-            <button id="analyzeBtn">Analyze</button>
-            <button id="resetBtn">Reset</button>
-            <button id="historyBtn">History</button>
+        <div class="input-section">
+            <div class="input-group-left">
+                <div class="input-group">
+                    <label for="urlInput">URL:</label>
+                    <input 
+                        type="url" 
+                        id="urlInput" 
+                        placeholder="Paste URL here (e.g., https://example.com/article)"
+                        autocomplete="off"
+                    >
+                </div>
+                <div class="button-group">
+                    <button id="analyzeBtn">Analyze</button>
+                    <button id="resetBtn">Reset</button>
+                    <button id="historyBtn">History</button>
+                </div>
+            </div>
+            <div class="input-group-right">
+                <div class="input-group">
+                    <label for="authorsInput">Author(s):</label>
+                    <textarea 
+                        id="authorsInput" 
+                        placeholder="Paste author names here (one per line or comma-separated)"
+                        autocomplete="off"
+                        rows="4"
+                    ></textarea>
+                </div>
+            </div>
         </div>
         
         <div class="scale-visualization">
             <h3>Scale Visualization</h3>
-            <div class="scale-bar">
-                <div class="scale-gradient"></div>
-            </div>
-            <div class="scale-labels">
-                <span class="scale-label">-100<br>(Strong GAL)</span>
-                <span class="scale-label">0<br>(Centrist)</span>
-                <span class="scale-label">+100<br>(Strong TAN)</span>
+            <div class="scale-container">
+                <div class="scale-bar-wrapper">
+                    <div class="scale-bar">
+                        <div class="scale-gradient"></div>
+                        <div class="scale-markers" id="scaleMarkers"></div>
+                    </div>
+                    <div class="scale-labels">
+                        <span class="scale-label">-100<br>(Strong GAL)</span>
+                        <span class="scale-label">0<br>(Centrist)</span>
+                        <span class="scale-label">+100<br>(Strong TAN)</span>
+                    </div>
+                </div>
+                <div class="scale-legend" id="scaleLegend">
+                    <div class="legend-title">Authors</div>
+                    <div class="legend-items" id="legendItems"></div>
+                </div>
             </div>
         </div>
         
@@ -112,10 +137,6 @@
             <div id="loading" class="loading hidden">
                 <div class="spinner"></div>
                 <p>Analyzing article...</p>
-            </div>
-            <div id="articleContent" class="article-content hidden">
-                <h3>Article Content</h3>
-                <div id="articleText"></div>
             </div>
             <div id="authorInfo" class="author-info hidden">
                 <h3>Author Information</h3>
