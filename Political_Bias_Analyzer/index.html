@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://api.openai.com https://api.allorigins.win https://thingproxy.freeboard.io; object-src 'none'; base-uri 'self';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://api.openai.com https://api.allorigins.win https://thingproxy.freeboard.io; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; upgrade-insecure-requests;">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
     <title>Political Bias Analyzer</title>
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -75,6 +78,36 @@
                         <button class="settings-btn settings-clean-btn" id="cleanKeyBtn">Clean Key</button>
                         <button class="settings-btn settings-update-btn" id="updateKeyBtn">Update Key</button>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- History Popup Modal -->
+        <div class="history-modal" id="historyModal">
+            <div class="history-modal-content">
+                <div class="history-modal-header">
+                    <h2>Analysis History</h2>
+                    <button class="history-close-btn" id="historyCloseBtn">×</button>
+                </div>
+                <div class="history-modal-body">
+                    <div id="historyLoading" class="history-loading">Loading history...</div>
+                    <div id="historyTableContainer" class="history-table-container hidden">
+                        <table class="history-table" id="historyTable">
+                            <thead>
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>Author Name</th>
+                                    <th>URL</th>
+                                    <th>Political Alignment</th>
+                                    <th>Confidence</th>
+                                    <th>GAL-TAN Score</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historyTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="historyEmpty" class="history-empty hidden">No analysis history found.</div>
                 </div>
             </div>
         </div>

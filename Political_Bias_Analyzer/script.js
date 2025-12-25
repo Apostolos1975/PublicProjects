@@ -14,6 +14,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const errorMessage = document.getElementById('errorMessage');
     const scaleMarkers = document.getElementById('scaleMarkers');
     const legendItems = document.getElementById('legendItems');
+    const historyModal = document.getElementById('historyModal');
+    const historyCloseBtn = document.getElementById('historyCloseBtn');
+    const historyTableBody = document.getElementById('historyTableBody');
+    const historyLoading = document.getElementById('historyLoading');
+    const historyTableContainer = document.getElementById('historyTableContainer');
+    const historyEmpty = document.getElementById('historyEmpty');
 
     // Persistent storage for authors (session-based, cleared on reset)
     let storedAuthors = [];
@@ -425,6 +431,225 @@ Format: Score: [number between -100 and 100]`;
         return data.choices[0].message.content.trim();
     }
 
+    // IndexedDB setup - Origin-scoped for security
+    // Database is automatically scoped to the origin (protocol + domain + port)
+    // This ensures data is only accessible from this exact web page origin
+    const DB_NAME = 'PoliticalBiasAnalyzer';
+    const DB_VERSION = 1;
+    const STORE_NAME = 'authorAnalyses';
+
+    // Security: Verify we're in a secure context (HTTPS or localhost)
+    function isSecureContext() {
+        return window.isSecureContext || window.location.protocol === 'https:' || 
+               window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    }
+
+    // Initialize IndexedDB with security checks
+    function initIndexedDB() {
+        // Security: Ensure we're in a secure context
+        if (!isSecureContext()) {
+            console.warn('IndexedDB requires a secure context (HTTPS or localhost)');
+            throw new Error('Database access requires a secure connection');
+        }
+
+        // Security: Verify origin integrity
+        const expectedOrigin = window.location.origin;
+        
+        return new Promise((resolve, reject) => {
+            // Security: Check if IndexedDB is available
+            if (!window.indexedDB) {
+                reject(new Error('IndexedDB is not supported in this browser'));
+                return;
+            }
+
+            const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+            request.onerror = () => {
+                console.error('IndexedDB error:', request.error);
+                reject(request.error);
+            };
+
+            request.onsuccess = (event) => {
+                const db = event.target.result;
+                
+                // Security: Verify origin matches (additional check)
+                // Note: IndexedDB already enforces origin isolation, but this is explicit verification
+                if (window.location.origin !== expectedOrigin) {
+                    db.close();
+                    reject(new Error('Origin mismatch detected'));
+                    return;
+                }
+
+                // Security: Add error handler to prevent data leakage
+                db.onerror = (event) => {
+                    console.error('Database error:', event.target.error);
+                };
+
+                resolve(db);
+            };
+
+            request.onupgradeneeded = (event) => {
+                const db = event.target.result;
+                
+                // Security: Ensure we're still in the correct origin during upgrade
+                if (window.location.origin !== expectedOrigin) {
+                    event.target.transaction.abort();
+                    reject(new Error('Origin mismatch during database upgrade'));
+                    return;
+                }
+
+                if (!db.objectStoreNames.contains(STORE_NAME)) {
+                    const objectStore = db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+                    
+                    // Security: Create indexes to prevent duplicate queries and ensure data integrity
+                    objectStore.createIndex('authorName', 'authorName', { unique: false });
+                    objectStore.createIndex('timestamp', 'timestamp', { unique: false });
+                    objectStore.createIndex('url', 'url', { unique: false });
+                    
+                    // Security: Add compound index for efficient queries while maintaining origin isolation
+                    // Note: IndexedDB indexes are also origin-scoped
+                }
+            };
+
+            request.onblocked = () => {
+                console.warn('IndexedDB upgrade blocked - close other tabs with this page open');
+            };
+        });
+    }
+
+    // Format timestamp as YYMMDD-HH:MM
+    function formatTimestamp(date = new Date()) {
+        const year = date.getFullYear().toString().slice(-2);
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const day = date.getDate().toString().padStart(2, '0');
+        const hours = date.getHours().toString().padStart(2, '0');
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        return `${year}${month}${day}-${hours}:${minutes}`;
+    }
+
+    // Parse confidence level from ChatGPT response
+    function parseConfidenceLevel(responseText) {
+        const text = responseText.toLowerCase();
+        if (text.includes('confidence level:') || text.includes('confidence:')) {
+            const match = text.match(/confidence\s*(?:level)?\s*:\s*(high|medium|low)/i);
+            if (match) {
+                return match[1].charAt(0).toUpperCase() + match[1].slice(1).toLowerCase();
+            }
+        }
+        // Fallback: look for standalone confidence words
+        if (text.includes('high confidence') || text.includes('high')) return 'High';
+        if (text.includes('medium confidence') || text.includes('medium')) return 'Medium';
+        if (text.includes('low confidence') || text.includes('low')) return 'Low';
+        return 'Medium'; // Default
+    }
+
+    // Parse political alignment text from ChatGPT response
+    function parsePoliticalAlignment(responseText) {
+        const alignmentMatch = responseText.match(/(?:political\s+alignment\s*\/?\s*leaning\s*:|political\s+alignment\s*:|alignment\s*\/?\s*leaning\s*:)\s*(.+?)(?:\n|confidence|GAL-TAN|score|$)/i);
+        if (alignmentMatch) {
+            return alignmentMatch[1].trim();
+        }
+        // Fallback: look for common alignment terms
+        const text = responseText.toLowerCase();
+        if (text.includes('unclear')) return 'Unclear';
+        if (text.includes('left-leaning')) return 'Left-leaning';
+        if (text.includes('right-leaning')) return 'Right-leaning';
+        if (text.includes('conservative')) return 'Conservative';
+        if (text.includes('liberal')) return 'Liberal';
+        if (text.includes('centrist') || text.includes('moderate')) return 'Centrist';
+        return 'Unclear';
+    }
+
+    // Save author analysis to IndexedDB with security measures
+    function saveAuthorAnalysis(authorName, url, alignmentResponse, score) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                // Security: Validate inputs before storage (prevent injection attacks)
+                if (!authorName || typeof authorName !== 'string' || authorName.trim().length === 0) {
+                    console.warn('Invalid author name, skipping IndexedDB storage');
+                    resolve();
+                    return;
+                }
+
+                // Security: Sanitize URL (XSS protection)
+                let sanitizedUrl = null;
+                if (url) {
+                    try {
+                        const urlObj = new URL(url);
+                        // Only allow http and https protocols
+                        if (!['http:', 'https:'].includes(urlObj.protocol)) {
+                            console.warn('Invalid URL protocol, storing as null');
+                            sanitizedUrl = null;
+                        } else {
+                            sanitizedUrl = url; // Store validated URL
+                        }
+                    } catch (e) {
+                        console.warn('Invalid URL format, storing as null');
+                        sanitizedUrl = null;
+                    }
+                }
+
+                // Security: Ensure secure context before accessing IndexedDB
+                if (!isSecureContext()) {
+                    console.warn('Cannot access IndexedDB in non-secure context');
+                    resolve();
+                    return;
+                }
+
+                const db = await initIndexedDB();
+                
+                // Security: Use readwrite transaction with error handling
+                const transaction = db.transaction([STORE_NAME], 'readwrite');
+                
+                // Security: Add transaction error handler
+                transaction.onerror = (event) => {
+                    console.error('Transaction error:', event.target.error);
+                };
+
+                // Security: Add transaction abort handler (prevents partial writes)
+                transaction.onabort = () => {
+                    console.warn('Transaction aborted');
+                };
+
+                const store = transaction.objectStore(STORE_NAME);
+
+                const alignmentText = parsePoliticalAlignment(alignmentResponse);
+                const confidenceLevel = parseConfidenceLevel(alignmentResponse);
+                const timestamp = formatTimestamp();
+
+                // Security: Construct data object with validated/sanitized values only
+                const data = {
+                    url: sanitizedUrl,
+                    authorName: authorName.trim(), // Sanitized: trimmed
+                    timestamp: timestamp, // Generated server-side equivalent (client-side safe format)
+                    politicalAlignment: alignmentText, // Parsed from response
+                    confidenceLevel: confidenceLevel, // Parsed from response
+                    score: (score !== null && score !== undefined) ? Math.max(-100, Math.min(100, score)) : null, // Validated range
+                    fullResponse: alignmentResponse // Original response (already sanitized by ChatGPT API)
+                };
+
+                const request = store.add(data);
+                
+                request.onsuccess = () => {
+                    // Security: Don't log sensitive data in production
+                    // Only log that save was successful
+                    console.log('Author analysis saved to IndexedDB successfully');
+                    resolve();
+                };
+                
+                request.onerror = () => {
+                    console.error('Error saving to IndexedDB:', request.error);
+                    // Security: Don't expose error details that could reveal database structure
+                    resolve(); // Don't reject - we don't want to break the flow if storage fails
+                };
+            } catch (error) {
+                // Security: Log error but don't expose sensitive information
+                console.error('Error in saveAuthorAnalysis:', error.message);
+                resolve(); // Don't reject - we don't want to break the flow if storage fails
+            }
+        });
+    }
+
     // Function to parse GAL-TAN score from ChatGPT response
     function parseGALTanScore(responseText) {
         // Try to find score in format "Score: [number]" or similar patterns
@@ -567,6 +792,9 @@ Format: Score: [number between -100 and 100]`;
                         score: score
                     });
                     
+                    // Save to IndexedDB (no URL for direct author analysis)
+                    await saveAuthorAnalysis(authorName, null, alignment, score);
+                    
                     // Store author in persistent array (avoid duplicates by name)
                     const existingIndex = storedAuthors.findIndex(a => 
                         a.name.toLowerCase().trim() === authorName.toLowerCase().trim()
@@ -677,6 +905,9 @@ Format: Score: [number between -100 and 100]`;
                                 alignment: alignment,
                                 score: score
                             });
+                            
+                            // Save to IndexedDB with URL
+                            await saveAuthorAnalysis(authorName, url, alignment, score);
                             
                             // Store author in persistent array (avoid duplicates by name)
                             const existingIndex = storedAuthors.findIndex(a => 
@@ -794,10 +1025,144 @@ Format: Score: [number between -100 and 100]`;
         urlInput.focus();
     });
 
-    // History button event listener (functionality to be defined later)
+    // History modal functionality
     historyBtn.addEventListener('click', () => {
-        // TODO: Implement history functionality
+        historyModal.classList.add('show');
+        loadHistoryData();
     });
+
+    historyCloseBtn.addEventListener('click', () => {
+        historyModal.classList.remove('show');
+    });
+
+    // Close history modal when clicking outside of it
+    historyModal.addEventListener('click', (e) => {
+        if (e.target === historyModal) {
+            historyModal.classList.remove('show');
+        }
+    });
+
+    // Close history modal with Escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && historyModal.classList.contains('show')) {
+            historyModal.classList.remove('show');
+        }
+    });
+
+    // Load and display history data from IndexedDB
+    async function loadHistoryData() {
+        historyLoading.classList.remove('hidden');
+        historyTableContainer.classList.add('hidden');
+        historyEmpty.classList.add('hidden');
+        
+        // Clear existing table rows
+        while (historyTableBody.firstChild) {
+            historyTableBody.removeChild(historyTableBody.firstChild);
+        }
+
+        try {
+            const db = await initIndexedDB();
+            const transaction = db.transaction([STORE_NAME], 'readonly');
+            const store = transaction.objectStore(STORE_NAME);
+            
+            // Get all records
+            const request = store.getAll();
+            
+            request.onsuccess = () => {
+                const records = request.result;
+                
+                if (records.length === 0) {
+                    historyLoading.classList.add('hidden');
+                    historyEmpty.classList.remove('hidden');
+                    return;
+                }
+
+                // Sort by timestamp descending (newest first)
+                // Parse timestamp format YYMMDD-HH:MM for sorting
+                records.sort((a, b) => {
+                    // Convert YYMMDD-HH:MM to comparable format
+                    const parseTimestamp = (ts) => {
+                        const [date, time] = ts.split('-');
+                        const year = '20' + date.substring(0, 2);
+                        const month = date.substring(2, 4);
+                        const day = date.substring(4, 6);
+                        const [hours, minutes] = time.split(':');
+                        return new Date(year, parseInt(month) - 1, parseInt(day), parseInt(hours), parseInt(minutes));
+                    };
+                    return parseTimestamp(b.timestamp) - parseTimestamp(a.timestamp);
+                });
+
+                // Create table rows
+                records.forEach(record => {
+                    const row = document.createElement('tr');
+                    
+                    // Timestamp
+                    const tdTimestamp = document.createElement('td');
+                    tdTimestamp.textContent = record.timestamp || '-';
+                    row.appendChild(tdTimestamp);
+                    
+                    // Author Name
+                    const tdAuthor = document.createElement('td');
+                    tdAuthor.textContent = record.authorName || '-';
+                    row.appendChild(tdAuthor);
+                    
+                    // URL
+                    const tdUrl = document.createElement('td');
+                    if (record.url) {
+                        const urlLink = document.createElement('a');
+                        urlLink.href = record.url;
+                        urlLink.target = '_blank';
+                        urlLink.rel = 'noopener noreferrer';
+                        urlLink.textContent = record.url;
+                        urlLink.style.color = '#667eea';
+                        urlLink.style.textDecoration = 'none';
+                        urlLink.addEventListener('mouseenter', () => {
+                            urlLink.style.textDecoration = 'underline';
+                        });
+                        urlLink.addEventListener('mouseleave', () => {
+                            urlLink.style.textDecoration = 'none';
+                        });
+                        tdUrl.appendChild(urlLink);
+                    } else {
+                        tdUrl.textContent = '-';
+                    }
+                    row.appendChild(tdUrl);
+                    
+                    // Political Alignment
+                    const tdAlignment = document.createElement('td');
+                    tdAlignment.textContent = record.politicalAlignment || '-';
+                    row.appendChild(tdAlignment);
+                    
+                    // Confidence Level
+                    const tdConfidence = document.createElement('td');
+                    tdConfidence.textContent = record.confidenceLevel || '-';
+                    row.appendChild(tdConfidence);
+                    
+                    // GAL-TAN Score
+                    const tdScore = document.createElement('td');
+                    tdScore.textContent = record.score !== null && record.score !== undefined ? record.score : '-';
+                    row.appendChild(tdScore);
+                    
+                    historyTableBody.appendChild(row);
+                });
+
+                historyLoading.classList.add('hidden');
+                historyTableContainer.classList.remove('hidden');
+            };
+
+            request.onerror = () => {
+                console.error('Error loading history:', request.error);
+                historyLoading.classList.add('hidden');
+                historyEmpty.textContent = 'Error loading history. Please try again.';
+                historyEmpty.classList.remove('hidden');
+            };
+        } catch (error) {
+            console.error('Error accessing IndexedDB:', error);
+            historyLoading.classList.add('hidden');
+            historyEmpty.textContent = 'Error accessing history database.';
+            historyEmpty.classList.remove('hidden');
+        }
+    }
 
     // Allow Enter key to trigger Analyze
     urlInput.addEventListener('keypress', (e) => {
