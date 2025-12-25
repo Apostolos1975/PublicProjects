@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://api.openai.com https://api.allorigins.win https://thingproxy.freeboard.io; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; upgrade-insecure-requests;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://api.openai.com https://api.allorigins.win https://thingproxy.freeboard.io; frame-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; upgrade-insecure-requests;">
     <meta http-equiv="X-Content-Type-Options" content="nosniff">
     <meta http-equiv="X-Frame-Options" content="DENY">
     <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
+    <link rel="icon" type="image/png" href="political_ideology_icon.png">
     <title>Political Bias Analyzer</title>
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -57,6 +58,10 @@
             <span class="settings-icon" id="settingsIcon">⚙️</span>
         </div>
 
+        <div class="author-tool-icon-wrapper">
+            <img src="icons/author_tool.jpg" alt="Author Tool" class="author-tool-icon" id="authorToolIcon">
+        </div>
+
         <!-- Settings Popup Modal -->
         <div class="settings-modal" id="settingsModal">
             <div class="settings-modal-content">
@@ -82,6 +87,19 @@
             </div>
         </div>
 
+        <!-- Author Analysis Popup Modal -->
+        <div class="author-analysis-modal" id="authorAnalysisModal">
+            <div class="author-analysis-modal-content">
+                <div class="author-analysis-modal-header">
+                    <h2>Author Analysis</h2>
+                    <button class="author-analysis-close-btn" id="authorAnalysisCloseBtn">×</button>
+                </div>
+                <div class="author-analysis-modal-body">
+                    <iframe src="author_analysis.html" frameborder="0" class="author-analysis-iframe"></iframe>
+                </div>
+            </div>
+        </div>
+
         <!-- History Popup Modal -->
         <div class="history-modal" id="historyModal">
             <div class="history-modal-content">
@@ -90,11 +108,18 @@
                     <button class="history-close-btn" id="historyCloseBtn">×</button>
                 </div>
                 <div class="history-modal-body">
+                    <div class="history-actions">
+                        <button class="history-delete-btn" id="historyDeleteBtn">Delete</button>
+                        <button class="history-delete-all-btn" id="historyDeleteAllBtn">Delete All</button>
+                    </div>
                     <div id="historyLoading" class="history-loading">Loading history...</div>
                     <div id="historyTableContainer" class="history-table-container hidden">
                         <table class="history-table" id="historyTable">
                             <thead>
                                 <tr>
+                                    <th class="history-checkbox-col">
+                                        <input type="checkbox" id="historySelectAll" title="Select All">
+                                    </th>
                                     <th>Timestamp</th>
                                     <th>Author Name</th>
                                     <th>URL</th>
@@ -145,7 +170,7 @@
         </div>
         
         <div class="scale-visualization">
-            <h3>Scale Visualization</h3>
+            <h3>GAL-TAN Scale Visualization</h3>
             <div class="scale-container">
                 <div class="scale-bar-wrapper">
                     <div class="scale-bar">

@@ -20,12 +20,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const historyLoading = document.getElementById('historyLoading');
     const historyTableContainer = document.getElementById('historyTableContainer');
     const historyEmpty = document.getElementById('historyEmpty');
+    const historyDeleteBtn = document.getElementById('historyDeleteBtn');
+    const historyDeleteAllBtn = document.getElementById('historyDeleteAllBtn');
+    const historySelectAll = document.getElementById('historySelectAll');
+
+    // Store records with their IDs for deletion
+    let historyRecords = [];
 
     // Persistent storage for authors (session-based, cleared on reset)
     let storedAuthors = [];
     const settingsIcon = document.getElementById('settingsIcon');
     const settingsModal = document.getElementById('settingsModal');
     const settingsCloseBtn = document.getElementById('settingsCloseBtn');
+    const authorToolIcon = document.getElementById('authorToolIcon');
+    const authorAnalysisModal = document.getElementById('authorAnalysisModal');
+    const authorAnalysisCloseBtn = document.getElementById('authorAnalysisCloseBtn');
     const cleanKeyBtn = document.getElementById('cleanKeyBtn');
     const updateKeyBtn = document.getElementById('updateKeyBtn');
 
@@ -652,15 +661,25 @@ Format: Score: [number between -100 and 100]`;
 
     // Function to parse GAL-TAN score from ChatGPT response
     function parseGALTanScore(responseText) {
-        // Try to find score in format "Score: [number]" or similar patterns
-        const scoreMatch = responseText.match(/Score:\s*(-?\d+)/i) || 
-                          responseText.match(/GAL-TAN Score:\s*(-?\d+)/i) ||
-                          responseText.match(/(-?\d+)\s*(?:out of 100|on the scale)/i);
+        // Try to find score in format "Score: [+/-number]" or similar patterns
+        // Updated regex to capture optional + sign: (\+\d+|\-\d+|\d+)
+        const scoreMatch = responseText.match(/Score:\s*(\+?\d+|\-\d+)/i) || 
+                          responseText.match(/GAL-TAN Score:\s*(\+?\d+|\-\d+)/i) ||
+                          responseText.match(/(\+?\d+|\-\d+)\s*(?:out of 100|on the scale)/i);
         
         if (scoreMatch) {
-            const score = parseInt(scoreMatch[1], 10);
-            // Clamp score to valid range
-            return Math.max(-100, Math.min(100, score));
+            // Parse the matched string (handles "+80", "-80", "80")
+            const scoreString = scoreMatch[1];
+            const score = parseInt(scoreString, 10);
+            
+            // Verify parsing was successful
+            if (isNaN(score)) {
+                console.warn('Failed to parse score from:', scoreString);
+                // Fall through to keyword matching
+            } else {
+                // Clamp score to valid range
+                return Math.max(-100, Math.min(100, score));
+            }
         }
         
         // Try to infer score from alignment description
@@ -718,8 +737,20 @@ Format: Score: [number between -100 and 100]`;
         storedAuthors.forEach((author, index) => {
             if (author.score === null || author.score === undefined) return;
             
-            // Calculate position percentage (0 to 100, where 0 = -100, 100 = +100)
-            const positionPercent = ((author.score + 100) / 200) * 100;
+            // Ensure score is a number and in valid range
+            const score = Number(author.score);
+            if (isNaN(score)) {
+                console.warn(`Invalid score for ${author.name}:`, author.score);
+                return;
+            }
+            
+            // Clamp score to valid range
+            const clampedScore = Math.max(-100, Math.min(100, score));
+            
+            // Calculate position percentage (0 to 100, where 0% = -100 (left/GAL), 100% = +100 (right/TAN))
+            // Formula: (score - min) / (max - min) * 100
+            // Range is -100 to +100, so: (score - (-100)) / (100 - (-100)) * 100 = (score + 100) / 200 * 100
+            const positionPercent = ((clampedScore + 100) / 200) * 100;
             
             // Create marker
             const marker = document.createElement('div');
@@ -1025,6 +1056,29 @@ Format: Score: [number between -100 and 100]`;
         urlInput.focus();
     });
 
+    // Author Analysis modal functionality
+    authorToolIcon.addEventListener('click', () => {
+        authorAnalysisModal.classList.add('show');
+    });
+
+    authorAnalysisCloseBtn.addEventListener('click', () => {
+        authorAnalysisModal.classList.remove('show');
+    });
+
+    // Close author analysis modal when clicking outside of it
+    authorAnalysisModal.addEventListener('click', (e) => {
+        if (e.target === authorAnalysisModal) {
+            authorAnalysisModal.classList.remove('show');
+        }
+    });
+
+    // Close author analysis modal with Escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && authorAnalysisModal.classList.contains('show')) {
+            authorAnalysisModal.classList.remove('show');
+        }
+    });
+
     // History modal functionality
     historyBtn.addEventListener('click', () => {
         historyModal.classList.add('show');
@@ -1060,6 +1114,10 @@ Format: Score: [number between -100 and 100]`;
             historyTableBody.removeChild(historyTableBody.firstChild);
         }
 
+        // Reset select all checkbox
+        historySelectAll.checked = false;
+        historyRecords = [];
+
         try {
             const db = await initIndexedDB();
             const transaction = db.transaction([STORE_NAME], 'readonly');
@@ -1077,6 +1135,9 @@ Format: Score: [number between -100 and 100]`;
                     return;
                 }
 
+                // Store records with IDs for deletion
+                historyRecords = records;
+
                 // Sort by timestamp descending (newest first)
                 // Parse timestamp format YYMMDD-HH:MM for sorting
                 records.sort((a, b) => {
@@ -1093,8 +1154,19 @@ Format: Score: [number between -100 and 100]`;
                 });
 
                 // Create table rows
-                records.forEach(record => {
+                records.forEach((record, index) => {
                     const row = document.createElement('tr');
+                    row.dataset.recordId = record.id;
+                    
+                    // Checkbox
+                    const tdCheckbox = document.createElement('td');
+                    tdCheckbox.className = 'history-checkbox-col';
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.className = 'history-record-checkbox';
+                    checkbox.dataset.recordId = record.id;
+                    tdCheckbox.appendChild(checkbox);
+                    row.appendChild(tdCheckbox);
                     
                     // Timestamp
                     const tdTimestamp = document.createElement('td');
@@ -1163,6 +1235,78 @@ Format: Score: [number between -100 and 100]`;
             historyEmpty.classList.remove('hidden');
         }
     }
+
+    // Select All checkbox handler
+    historySelectAll.addEventListener('change', (e) => {
+        const checkboxes = document.querySelectorAll('.history-record-checkbox');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = e.target.checked;
+        });
+    });
+
+    // Delete selected records
+    historyDeleteBtn.addEventListener('click', async () => {
+        const checkboxes = document.querySelectorAll('.history-record-checkbox:checked');
+        
+        if (checkboxes.length === 0) {
+            alert('Please select at least one record to delete.');
+            return;
+        }
+
+        if (!confirm(`Are you sure you want to delete ${checkboxes.length} record(s)?`)) {
+            return;
+        }
+
+        try {
+            const db = await initIndexedDB();
+            const transaction = db.transaction([STORE_NAME], 'readwrite');
+            const store = transaction.objectStore(STORE_NAME);
+
+            const deletePromises = Array.from(checkboxes).map(checkbox => {
+                return new Promise((resolve, reject) => {
+                    const recordId = parseInt(checkbox.dataset.recordId, 10);
+                    const deleteRequest = store.delete(recordId);
+                    deleteRequest.onsuccess = () => resolve();
+                    deleteRequest.onerror = () => reject(deleteRequest.error);
+                });
+            });
+
+            await Promise.all(deletePromises);
+            
+            // Reload history to reflect changes
+            await loadHistoryData();
+        } catch (error) {
+            console.error('Error deleting records:', error);
+            alert('Error deleting records. Please try again.');
+        }
+    });
+
+    // Delete all records
+    historyDeleteAllBtn.addEventListener('click', async () => {
+        if (!confirm('Are you sure you want to delete ALL records? This action cannot be undone.')) {
+            return;
+        }
+
+        try {
+            const db = await initIndexedDB();
+            const transaction = db.transaction([STORE_NAME], 'readwrite');
+            const store = transaction.objectStore(STORE_NAME);
+            const clearRequest = store.clear();
+
+            clearRequest.onsuccess = async () => {
+                // Reload history to reflect changes
+                await loadHistoryData();
+            };
+
+            clearRequest.onerror = () => {
+                console.error('Error deleting all records:', clearRequest.error);
+                alert('Error deleting all records. Please try again.');
+            };
+        } catch (error) {
+            console.error('Error accessing IndexedDB:', error);
+            alert('Error accessing database. Please try again.');
+        }
+    });
 
     // Allow Enter key to trigger Analyze
     urlInput.addEventListener('keypress', (e) => {
