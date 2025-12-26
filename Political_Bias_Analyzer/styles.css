@@ -1068,3 +1068,59 @@ button:disabled:hover {
     }
 }
 
+/* Author Analysis Page Styles (for iframe content) */
+/* These styles apply when author_analysis.html loads styles.css in its iframe context */
+/* Note: Using class selectors to avoid affecting main page body/html */
+html.author-analysis-html {
+    background: white;
+}
+
+body.author-analysis-body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    padding: 20px;
+    background: white;
+    color: #333;
+    margin: 0;
+}
+
+.author-analysis-content {
+    padding: 0;
+}
+
+.author-analysis-title {
+    margin-bottom: 30px;
+    color: #333;
+    font-size: 1.5rem;
+    font-weight: 600;
+    text-align: center;
+}
+
+.author-analysis-input-group {
+    margin-bottom: 20px;
+}
+
+.author-analysis-input-group label {
+    display: block;
+    font-weight: 600;
+    color: #333;
+    font-size: 16px;
+    margin-bottom: 5px;
+}
+
+.author-analysis-input {
+    width: 100%;
+    padding: 15px 20px;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    font-size: 16px;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 100px;
+    transition: border-color 0.3s;
+}
+
+.author-analysis-input:focus {
+    outline: none;
+    border-color: #667eea;
+}
+

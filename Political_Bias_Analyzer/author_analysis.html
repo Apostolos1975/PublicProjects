@@ -1,38 +1,42 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="author-analysis-html">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Author Analysis</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            padding: 20px;
-            background: white;
-            color: #333;
-        }
-
-        h2 {
-            margin-bottom: 20px;
-            color: #333;
-            font-size: 1.5rem;
-        }
-
-        .content {
-            padding: 10px;
-        }
-    </style>
+    <link rel="stylesheet" href="styles.css">
 </head>
-<body>
-    <div class="content">
-        <h2>Author Analysis</h2>
-        <p>Author analysis content will be displayed here.</p>
+<body class="author-analysis-body">
+    <div class="author-analysis-content">
+        <div class="author-analysis-input-group">
+            <label for="authorAnalysisInput">Input:</label>
+            <textarea 
+                id="authorAnalysisInput" 
+                class="author-analysis-input"
+                placeholder="Enter text here... (Press Ctrl+Enter to execute)"
+                rows="6"
+            ></textarea>
+        </div>
     </div>
+
+    <script>
+        const authorAnalysisInput = document.getElementById('authorAnalysisInput');
+
+        // Functionality to be executed on Ctrl+Enter
+        function executeAuthorAnalysis() {
+            const inputText = authorAnalysisInput.value.trim();
+            
+            // TODO: Define functionality here
+            console.log('Execute author analysis with input:', inputText);
+        }
+
+        // Handle Ctrl+Enter keypress
+        authorAnalysisInput.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'Enter') {
+                e.preventDefault();
+                executeAuthorAnalysis();
+            }
+        });
+    </script>
 </body>
 </html>
