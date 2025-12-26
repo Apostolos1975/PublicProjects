@@ -9,6 +9,34 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- Settings cogwheel -->
+    <button id="settingsBtn" class="settings-cog" aria-label="Settings">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M12 1v6m0 6v6M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24M1 12h6m6 0h6M5.64 18.36l4.24-4.24m4.24-4.24l4.24-4.24"></path>
+        </svg>
+    </button>
+
+    <!-- Settings Popup -->
+    <div id="settingsPopup" class="popup-overlay">
+        <div class="popup-content">
+            <div class="popup-header">
+                <h2>ChatGPT parameters</h2>
+                <button id="closePopup" class="close-btn" aria-label="Close">×</button>
+            </div>
+            <div class="popup-body">
+                <div class="form-group">
+                    <label for="apiKey">API Key</label>
+                    <input type="password" id="apiKey" class="api-key-input" placeholder="Enter your API key">
+                </div>
+                <div class="button-group">
+                    <button id="saveKeyBtn" class="btn btn-primary">Save Key</button>
+                    <button id="deleteKeyBtn" class="btn btn-secondary">Delete Key</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="container mx-auto px-4 py-8">
         <!-- Template content goes here -->
     </div>

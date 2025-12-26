@@ -11,29 +11,52 @@ class SecureStorage {
     }
 
     /**
-     * Initialize or retrieve encryption key from session
-     * Key is stored in memory only, not persisted
+     * Initialize or retrieve encryption key
+     * Key is derived deterministically from origin + app secret (not stored)
+     * This ensures data persists across sessions without storing stealable keys
      */
     async initKey() {
-        // Generate a key from a passphrase derived from session
-        // This ensures the key is unique per session and not stored
-        const passphrase = this.getSessionPassphrase();
+        // Generate a key from a deterministic passphrase
+        // No session ID is stored - key is derived from origin + app secret
+        const passphrase = this.getDeterministicPassphrase();
         return this.deriveKeyFromPassphrase(passphrase);
     }
 
     /**
-     * Get a session-based passphrase (not stored, regenerated each session)
+     * Get a deterministic passphrase for encryption key derivation
+     * Based on origin + app-specific secret (not stored, computed on-the-fly)
+     * This ensures:
+     * - Same origin = same key (data persists across sessions)
+     * - Different origin = different key (domain isolation)
+     * - No stealable session ID in storage
+     * 
+     * FUTURE ENHANCEMENT (Optional):
+     * For stronger security, consider adding a user-provided master password:
+     * 1. Prompt user for a master password on first use (store a hash/derived key)
+     * 2. Combine master password with origin + appSecret in the passphrase
+     * 3. This would prevent any JavaScript on the same origin from automatically
+     *    deriving the encryption key without user input
+     * 4. Example: return `${origin}_${appSecret}_${await getUserMasterPassword()}`;
+     * 5. This adds a layer of protection against compromised JavaScript/XSS attacks
      */
-    getSessionPassphrase() {
-        // Use a combination of sessionStorage ID and user agent
-        // This creates a unique key per session
-        const sessionId = sessionStorage.getItem('session_id') || this.generateSessionId();
-        sessionStorage.setItem('session_id', sessionId);
-        return `${sessionId}_${navigator.userAgent}`;
-    }
-
-    generateSessionId() {
-        return crypto.randomUUID();
+    getDeterministicPassphrase() {
+        // Use origin (domain + protocol) for domain isolation
+        const origin = window.location.origin;
+        
+        // App-specific secret (in production, consider making this configurable)
+        // This adds entropy and ensures different apps on same domain have different keys
+        const appSecret = 'llm-design-template-v1';
+        
+        // Optional: include user agent for additional entropy (removed for cross-device compatibility)
+        // If you want data to work across devices, remove userAgent
+        // If you want device-specific encryption, include it
+        const includeUserAgent = false; // Set to true for device-specific keys
+        
+        if (includeUserAgent) {
+            return `${origin}_${appSecret}_${navigator.userAgent}`;
+        } else {
+            return `${origin}_${appSecret}`;
+        }
     }
 
     /**
