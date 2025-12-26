@@ -28,7 +28,8 @@ A secure, minimal web application template with security-by-design principles an
 ├── style.css           # Custom styles
 ├── script.js           # Main JavaScript logic
 ├── secureStorage.js    # Secure storage utility with encryption
-└── README.md           # This file
+├── README.md           # User-facing documentation
+└── AI_instructions.md  # Instructions for AI coding agents
 ```
 
 ## Usage
@@ -127,6 +128,10 @@ secureStorage.removeLocalStorage('key');
 
 This is a template project. Feel free to fork and customize for your needs.
 
+### For AI Coding Agents
+
+If you're an AI coding assistant working on this project, please read `AI_instructions.md` first. It contains important guidelines about design constraints, security requirements, and when to ask for user permission before implementing new features.
+
 ## License
 
 [Specify your license here]
@@ -137,5 +142,3 @@ This is a template project. Feel free to fork and customize for your needs.
 - For production use, consider using a more robust encryption library
 - The current implementation provides a good balance between security and usability for client-side applications
 - Remember that client-side encryption has inherent limitations - it protects against casual inspection and most browser extensions, but not against sophisticated malware or compromised JavaScript
-
-

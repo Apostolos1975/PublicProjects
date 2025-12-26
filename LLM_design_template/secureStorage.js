@@ -141,12 +141,31 @@ class SecureStorage {
         try {
             const key = await this.keyPromise;
             
+            // Validate encrypted data format
+            if (!encryptedData || typeof encryptedData !== 'string') {
+                throw new Error('Invalid encrypted data format');
+            }
+            
             // Convert from base64
-            const combined = Uint8Array.from(atob(encryptedData), c => c.charCodeAt(0));
+            let combined;
+            try {
+                combined = Uint8Array.from(atob(encryptedData), c => c.charCodeAt(0));
+            } catch (e) {
+                throw new Error('Invalid base64 encoded data');
+            }
+            
+            // Check if data is long enough (at least 12 bytes for IV)
+            if (combined.length < 12) {
+                throw new Error('Encrypted data too short (missing IV)');
+            }
             
             // Extract IV and encrypted data
             const iv = combined.slice(0, 12);
             const encrypted = combined.slice(12);
+            
+            if (encrypted.length === 0) {
+                throw new Error('No encrypted data found');
+            }
             
             const decrypted = await crypto.subtle.decrypt(
                 { ...this.algorithm, iv: iv },
@@ -155,10 +174,22 @@ class SecureStorage {
             );
             
             const decoder = new TextDecoder();
-            return JSON.parse(decoder.decode(decrypted));
+            const decryptedText = decoder.decode(decrypted);
+            return JSON.parse(decryptedText);
         } catch (error) {
             console.error('Decryption error:', error);
-            throw new Error('Failed to decrypt data');
+            console.error('Error details:', {
+                name: error.name,
+                message: error.message,
+                origin: window.location.origin,
+                passphrase: this.getDeterministicPassphrase()
+            });
+            
+            // Provide more specific error message
+            if (error.name === 'OperationError' || error.message.includes('operation')) {
+                throw new Error('Failed to decrypt data - the encryption key may have changed or the data was encrypted with a different key. This can happen if the origin changed (e.g., file:// vs http://).');
+            }
+            throw new Error(`Failed to decrypt data: ${error.message}`);
         }
     }
 
@@ -175,7 +206,15 @@ class SecureStorage {
         const sanitizedKey = this.sanitizeInput(key);
         const encrypted = localStorage.getItem(sanitizedKey);
         if (!encrypted) return null;
-        return await this.decrypt(encrypted);
+        
+        try {
+            return await this.decrypt(encrypted);
+        } catch (error) {
+            // If decryption fails, it might be due to origin change (file:// vs http://)
+            // Log the error but don't throw - let the caller handle it
+            console.warn('Failed to decrypt stored data. This may happen if the origin changed (e.g., file:// vs http://). The data may need to be re-saved.');
+            throw error; // Re-throw so caller knows decryption failed
+        }
     }
 
     removeLocalStorage(key) {
