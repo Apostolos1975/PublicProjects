@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Meta tags for character encoding and responsive design -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Content Security Policy to restrict resource loading for security -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.tailwindcss.com; style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; connect-src 'self' https://api.openai.com;">
+    <title>M&A Tool</title>
+    <!-- External libraries: Tailwind CSS for utility classes -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Custom stylesheet -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Left Navigation Menu - Collapsible sidebar with 10 main sections -->
+    <!-- Starts collapsed by default to prevent animation flash on page load -->
+    <nav class="sidebar-nav collapsed" id="sidebarNav">
+        <!-- Navigation header with title and toggle button - Entire header is clickable -->
+        <div class="nav-header" id="navHeader">
+            <h2>M&A Tool</h2>
+            <!-- Hamburger menu button to toggle sidebar visibility -->
+            <button id="toggleNavBtn" class="nav-toggle-btn sidebar-collapsed" aria-label="Toggle navigation">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="3" y1="12" x2="21" y2="12"></line>
+                    <line x1="3" y1="6" x2="21" y2="6"></line>
+                    <line x1="3" y1="18" x2="21" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        <!-- Navigation menu list containing all 10 main sections -->
+        <ul class="nav-menu">
+            <!-- Navigation item 1: Deal Sourcing & Pipeline Management -->
+            <li class="nav-item">
+                <!-- Target discovery (databases, market scans, alerts)
+                     Deal pipeline tracking (stages, probabilities, owners)
+                     Relationship management (bankers, founders, advisors)
+                     Strategic fit scoring (sector, geography, size, synergies) -->
+                <a href="#" class="nav-link" data-section="1">
+                    <span class="nav-text">Deal Sourcing & Pipeline Management</span>
+                </a>
+            </li>
+            <!-- Navigation item 2: Financial Analysis & Valuation -->
+            <li class="nav-item">
+                <!-- Financial data ingestion (historicals, forecasts)
+                     Valuation models (DCF, comparables, precedent transactions)
+                     Scenario & sensitivity analysis
+                     Synergy modeling (cost/revenue synergies)
+                     Cap table & ownership analysis -->
+                <a href="#" class="nav-link" data-section="2">
+                    <span class="nav-text">Financial Analysis & Valuation</span>
+                </a>
+            </li>
+            <!-- Navigation item 3: Due Diligence Management (ACTIVE - only enabled menu item) -->
+            <li class="nav-item">
+                <!-- Virtual data room (VDR) integration
+                     Checklist & workstream management (legal, financial, tech, HR)
+                     Document tagging, search, and versioning
+                     Risk & issue tracking
+                     Q&A workflow with sellers -->
+                <a href="#" class="nav-link active" data-section="3">
+                    <span class="nav-text">Due Diligence Management</span>
+                </a>
+            </li>
+            <!-- Navigation item 4: Collaboration & Governance -->
+            <li class="nav-item">
+                <!-- Role-based access control (internal vs advisors)
+                     Audit trails & activity logs
+                     Approval workflows (IC, board, legal sign-off)
+                     Notes, comments, and decision records -->
+                <a href="#" class="nav-link" data-section="4">
+                    <span class="nav-text">Collaboration & Governance</span>
+                </a>
+            </li>
+            <!-- Navigation item 5: Deal Structuring & Execution -->
+            <li class="nav-item">
+                <!-- Term sheet & LOI tracking
+                     Transaction structure modeling (cash/stock/earn-outs)
+                     Timeline & milestone management
+                     Regulatory & compliance tracking -->
+                <a href="#" class="nav-link" data-section="5">
+                    <span class="nav-text">Deal Structuring & Execution</span>
+                </a>
+            </li>
+            <!-- Navigation item 6: Post-Merger Integration (PMI) -->
+            <li class="nav-item">
+                <!-- Integration planning & tracking
+                     Synergy realization monitoring
+                     Day-1 readiness checklists
+                     Org, systems, and process integration tracking
+                     KPI & value-capture dashboards -->
+                <a href="#" class="nav-link" data-section="6">
+                    <span class="nav-text">Post-Merger Integration (PMI)</span>
+                </a>
+            </li>
+            <!-- Navigation item 7: Intelligence & Benchmarking -->
+            <li class="nav-item">
+                <!-- Comparable transaction databases
+                     Market & sector benchmarks
+                     Historical deal performance analytics
+                     Lessons-learned repositories -->
+                <a href="#" class="nav-link" data-section="7">
+                    <span class="nav-text">Intelligence & Benchmarking</span>
+                </a>
+            </li>
+            <!-- Navigation item 8: Security, Compliance & Trust -->
+            <li class="nav-item">
+                <!-- Granular permissions
+                     Encryption (at rest & in transit)
+                     Compliance support (GDPR, SOC 2, ISO 27001)
+                     Legal hold & retention policies -->
+                <a href="#" class="nav-link" data-section="8">
+                    <span class="nav-text">Security, Compliance & Trust</span>
+                </a>
+            </li>
+            <!-- Navigation item 9: Automation & AI -->
+            <li class="nav-item">
+                <!-- Document summarization & risk extraction
+                     Anomaly detection in financials
+                     Automated diligence checklists
+                     Deal insight recommendations
+                     Search across unstructured diligence data -->
+                <a href="#" class="nav-link" data-section="9">
+                    <span class="nav-text">Automation & AI</span>
+                </a>
+            </li>
+            <!-- Navigation item 10: Integration & Extensibility -->
+            <li class="nav-item">
+                <!-- CRM integration (Salesforce, HubSpot)
+                     VDRs (Intralinks, Datasite)
+                     Financial tools (Excel, BI tools)
+                     Custom APIs & exports -->
+                <a href="#" class="nav-link" data-section="10">
+                    <span class="nav-text">Integration & Extensibility</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+
+    <!-- Settings button - Fixed position in top right corner -->
+    <!-- Opens popup to configure ChatGPT API key and parameters -->
+    <button id="settingsBtn" class="settings-cog" aria-label="Settings">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M12 1v6m0 6v6M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24M1 12h6m6 0h6M5.64 18.36l4.24-4.24m4.24-4.24l4.24-4.24"></path>
+        </svg>
+    </button>
+
+    <!-- Settings Popup Modal - Configure ChatGPT API settings -->
+    <div id="settingsPopup" class="popup-overlay">
+        <div class="popup-content">
+            <div class="popup-header">
+                <h2>ChatGPT parameters</h2>
+                <button id="closePopup" class="close-btn" aria-label="Close">×</button>
+            </div>
+            <div class="popup-body">
+                <!-- API Key input section with show/hide password toggle -->
+                <div class="form-group">
+                    <label for="apiKey">API Key</label>
+                    <div class="input-wrapper">
+                        <!-- Password input field for API key (hidden by default) -->
+                        <input type="password" id="apiKey" class="api-key-input" placeholder="Enter your API key">
+                        <!-- Toggle button to show/hide API key -->
+                        <button type="button" id="togglePassword" class="toggle-password-btn" aria-label="Toggle password visibility">
+                            <svg id="eyeClosed" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                            <svg id="eyeOpen" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+                                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                                <line x1="1" y1="1" x2="23" y2="23"></line>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <!-- API Key management buttons -->
+                <div class="button-group">
+                    <button id="loadKeyBtn" class="btn btn-secondary">Load Key</button>
+                    <button id="saveKeyBtn" class="btn btn-primary">Save Key</button>
+                    <button id="deleteKeyBtn" class="btn btn-secondary">Delete Key</button>
+                </div>
+                <!-- ChatGPT model configuration -->
+                <div class="form-group">
+                    <div class="form-row">
+                        <!-- Temperature setting (0-1) controls randomness of responses -->
+                        <div class="form-field-inline">
+                            <label for="temperature">Temperature</label>
+                            <input type="number" id="temperature" class="api-key-input" min="0" max="1" step="0.1" value="0.3" placeholder="0.3">
+                        </div>
+                        <!-- Model selection dropdown -->
+                        <div class="form-field-inline">
+                            <label for="modelSelection">Model selection</label>
+                            <select id="modelSelection" class="api-key-input">
+                                <option value="gpt-5.1" selected>gpt-5.1</option>
+                                <option value="gpt-5">gpt-5</option>
+                                <option value="gpt-4.1">gpt-4.1</option>
+                                <option value="gpt-4.1-mini">gpt-4.1-mini</option>
+                                <option value="gpt-4o">gpt-4o</option>
+                                <option value="gpt-3.5-turbo">gpt-3.5-turbo</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Area - Adjusts margin based on sidebar state -->
+    <div class="main-content sidebar-collapsed">
+        <!-- Target Company Panel - Static panel always visible at top -->
+        <!-- Contains company information that persists across all menu sections -->
+        <div class="target-company-panel">
+            <div class="target-company-box">
+                <!-- Title with collapse/expand toggle button - Entire bar is clickable -->
+                <div class="target-company-title-wrapper" id="targetCompanyTitleWrapper">
+                    <h3 class="target-company-title">Target company</h3>
+                    <button id="toggleTargetCompanyBtn" class="target-company-toggle" aria-label="Toggle target company section">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toggle-icon">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </button>
+                </div>
+                <!-- Three-column grid layout for company information fields -->
+                <!-- This section can be collapsed to save space -->
+                <div class="target-company-fields" id="targetCompanyFields">
+                    <!-- Company name input field -->
+                    <div class="target-field">
+                        <label for="companyName">Name of company</label>
+                        <input type="text" id="companyName" class="target-input" placeholder="Enter company name">
+                    </div>
+                    <!-- Company URL input field -->
+                    <div class="target-field">
+                        <label for="companyURL">Company URL</label>
+                        <input type="text" id="companyURL" class="target-input" placeholder="Enter company URL">
+                    </div>
+                    <!-- Domain classification field - Currently text input, will become dropdown later -->
+                    <div class="target-field">
+                        <label for="companyDomain">Domain (classification)</label>
+                        <input type="text" id="companyDomain" class="target-input" placeholder="Enter domain">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main content container with chat interface -->
+        <div class="container mx-auto px-4 py-8">
+            <div class="chat-interface">
+            <!-- Prompt input area for ChatGPT queries -->
+            <div class="form-group">
+                <label for="promptInput">Prompt</label>
+                <textarea id="promptInput" class="prompt-input" rows="4" placeholder="Enter your prompt here..."></textarea>
+            </div>
+            <!-- Action buttons for chat interface -->
+            <div class="button-group">
+                <button id="runBtn" class="btn btn-primary">Run</button>
+                <button id="clearBtn" class="btn btn-secondary">Clear</button>
+            </div>
+            <!-- Results display area - Read-only textarea showing ChatGPT responses -->
+            <div class="form-group">
+                <label for="resultInput">Result</label>
+                <textarea id="resultInput" class="result-input" rows="8" placeholder="Results will appear here..." readonly></textarea>
+            </div>
+            </div>
+        </div>
+    </div>
+    <!-- External JavaScript files -->
+    <!-- Secure storage utility for encrypted local storage -->
+    <script src="secureStorage.js"></script>
+    <!-- Main application logic -->
+    <script src="script.js"></script>
+</body>
+</html>
+

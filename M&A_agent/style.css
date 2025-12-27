@@ -1,0 +1,636 @@
+/* ============================================
+   M&A Tool - Main Stylesheet
+   ============================================ */
+
+/* Base body styles - Full viewport height with flex layout */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    background-color: #f8fafc;
+    color: #1e293b;
+    margin: 0;
+    padding: 0;
+}
+
+/* ============================================
+   Sidebar Navigation Styles
+   ============================================ */
+
+/* Main sidebar container - Fixed position on left side */
+/* Starts with no transition to prevent animation flash on page load */
+.sidebar-nav {
+    width: 280px;
+    min-width: 280px;
+    height: 100vh;
+    background-color: #ffffff;
+    border-right: 1px solid #e2e8f0;
+    position: fixed;
+    left: 0;
+    top: 0;
+    overflow-y: auto;
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05);
+    z-index: 100;
+    transition: none;
+}
+
+/* Enable smooth transitions after page load */
+.sidebar-nav.loaded {
+    transition: transform 0.3s ease, width 0.3s ease;
+}
+
+/* Collapsed state - Slide sidebar off-screen to the left */
+.sidebar-nav.collapsed {
+    transform: translateX(-100%);
+}
+
+/* Navigation header containing title and toggle button */
+/* Entire header is clickable to toggle sidebar visibility */
+.nav-header {
+    padding: 24px 20px;
+    border-bottom: 1px solid #e2e8f0;
+    background-color: #f8fafc;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.2s;
+}
+
+/* Hover effect to indicate clickability */
+.nav-header:hover {
+    background-color: #f1f5f9;
+}
+
+.nav-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1e293b;
+    flex: 1;
+}
+
+/* Hamburger menu toggle button - Switches sidebar visibility */
+.nav-toggle-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    /* Smooth transitions for position changes when moving between header and body */
+    transition: background-color 0.2s, color 0.2s, position 0.3s ease, top 0.3s ease, left 0.3s ease;
+    position: relative;
+    z-index: 1;
+}
+
+.nav-toggle-btn:hover {
+    background-color: #e2e8f0;
+    color: #1e293b;
+}
+
+.nav-toggle-btn svg {
+    width: 20px;
+    height: 20px;
+}
+
+.nav-menu {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.nav-item {
+    border-bottom: 1px solid #f1f5f9;
+}
+
+/* Navigation link styles - Default state: grayed out and disabled */
+/* Only the active link (Due Diligence) is enabled */
+.nav-link {
+    display: block;
+    padding: 16px 20px;
+    text-decoration: none;
+    color: #94a3b8;
+    transition: all 0.2s;
+    cursor: not-allowed;
+    opacity: 0.5;
+    pointer-events: none; /* Disable clicking on inactive items */
+}
+
+.nav-link:hover {
+    background-color: transparent;
+    color: #94a3b8;
+}
+
+/* Active navigation link - Only Due Diligence Management is active */
+/* Full opacity, blue color, clickable, with left border accent */
+.nav-link.active {
+    background-color: #eff6ff;
+    color: #3b82f6;
+    border-left: 3px solid #3b82f6;
+    opacity: 1;
+    cursor: pointer;
+    pointer-events: auto; /* Enable clicking on active item */
+}
+
+.nav-link.active:hover {
+    background-color: #dbeafe;
+    color: #2563eb;
+}
+
+.nav-text {
+    font-size: 0.875rem;
+    line-height: 1.5;
+    font-weight: 500;
+}
+
+/* ============================================
+   Main Content Area Styles
+   ============================================ */
+
+/* Main content container - Adjusts margin based on sidebar state */
+.main-content {
+    flex: 1;
+    margin-left: 280px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    transition: none;
+}
+
+.main-content.loaded {
+    transition: margin-left 0.3s ease;
+}
+
+.main-content.sidebar-collapsed {
+    margin-left: 0;
+}
+
+/* ============================================
+   Target Company Panel Styles
+   ============================================ */
+
+/* Static panel container at top of page - Always visible */
+.target-company-panel {
+    width: 100%;
+    padding: 20px;
+    background-color: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.target-company-box {
+    max-width: 1400px;
+    margin: 0 auto;
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 24px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Title wrapper with flex layout for title and toggle button */
+/* Entire bar is clickable to toggle collapse/expand */
+.target-company-title-wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 0 0 20px 0;
+    border-bottom: 2px solid #e2e8f0;
+    padding-bottom: 12px;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.2s;
+    border-radius: 4px;
+    padding: 12px 8px;
+    margin-left: -8px;
+    margin-right: -8px;
+    margin-bottom: 20px;
+}
+
+/* Hover effect to indicate clickability */
+.target-company-title-wrapper:hover {
+    background-color: #f8fafc;
+}
+
+.target-company-title {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1e293b;
+    flex: 1;
+}
+
+/* Toggle button for collapsing/expanding the section */
+.target-company-toggle {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px 8px;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: background-color 0.2s, color 0.2s, transform 0.3s ease;
+}
+
+.target-company-toggle:hover {
+    background-color: #f1f5f9;
+    color: #1e293b;
+}
+
+.target-company-toggle svg {
+    width: 16px;
+    height: 16px;
+    transition: transform 0.3s ease;
+}
+
+/* Rotate icon when section is collapsed */
+.target-company-toggle.collapsed svg {
+    transform: rotate(-90deg);
+}
+
+/* Three-column grid layout for company information fields */
+/* Responsive: Stacks to single column on smaller screens */
+.target-company-fields {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    max-height: 500px;
+    overflow: hidden;
+    transition: max-height 0.3s ease, opacity 0.3s ease, margin 0.3s ease;
+    opacity: 1;
+    margin-top: 0;
+}
+
+/* Collapsed state - hide fields with smooth animation */
+.target-company-fields.collapsed {
+    max-height: 0;
+    opacity: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    overflow: hidden;
+}
+
+.target-field {
+    display: flex;
+    flex-direction: column;
+}
+
+.target-field label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    font-size: 0.875rem;
+    color: #475569;
+}
+
+.target-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+    color: #1e293b;
+    background-color: #ffffff;
+    box-sizing: border-box;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.target-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.target-input::placeholder {
+    color: #94a3b8;
+}
+
+/* ============================================
+   Responsive Design - Target Company Panel
+   ============================================ */
+
+/* Tablet and smaller: Stack fields vertically */
+@media (max-width: 1024px) {
+    .target-company-fields {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+}
+
+@media (max-width: 768px) {
+    .target-company-panel {
+        padding: 16px;
+    }
+    
+    .target-company-box {
+        padding: 20px;
+    }
+}
+
+/* ============================================
+   Toggle Button - Collapsed State
+   ============================================ */
+
+/* When sidebar is collapsed, button moves to top-left corner as floating button */
+.nav-toggle-btn.sidebar-collapsed {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 101;
+    background-color: #ffffff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e2e8f0;
+}
+
+.nav-toggle-btn.sidebar-collapsed:hover {
+    background-color: #f8fafc;
+}
+
+/* Main content container box */
+.container {
+    max-width: 80vw;
+    width: 100%;
+    background-color: #ffffff;
+    border-radius: 8px;
+    padding: 24px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* ============================================
+   Settings Button Styles
+   ============================================ */
+
+/* Fixed position settings button in top-right corner */
+.settings-cog {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    color: #1e293b;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.settings-cog:hover {
+    color: #3b82f6;
+}
+
+.settings-cog svg {
+    width: 24px;
+    height: 24px;
+}
+
+/* ============================================
+   Settings Popup Modal Styles
+   ============================================ */
+
+/* Full-screen overlay backdrop for settings popup */
+.popup-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+}
+
+.popup-overlay.active {
+    display: flex;
+}
+
+.popup-content {
+    background: white;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.popup-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.popup-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 28px;
+    cursor: pointer;
+    color: #64748b;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.close-btn:hover {
+    color: #1e293b;
+}
+
+.popup-body {
+    padding: 20px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #1e293b;
+}
+
+.form-row {
+    display: flex;
+    gap: 16px;
+    align-items: flex-end;
+}
+
+.form-field-inline {
+    flex: 0 0 auto;
+}
+
+.form-field-inline label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #1e293b;
+    white-space: nowrap;
+}
+
+.form-field-inline .api-key-input {
+    width: auto;
+    min-width: 120px;
+    padding: 10px 12px;
+}
+
+.form-field-inline select.api-key-input {
+    padding-right: 32px;
+}
+
+/* Remove spinner arrows from number input */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input[type="number"] {
+    -moz-appearance: textfield;
+}
+
+.input-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.api-key-input {
+    width: 100%;
+    padding: 10px 40px 10px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 14px;
+    color: #1e293b;
+    background-color: #ffffff;
+    box-sizing: border-box;
+}
+
+.toggle-password-btn {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+}
+
+.toggle-password-btn:hover {
+    color: #1e293b;
+}
+
+.toggle-password-btn svg {
+    width: 20px;
+    height: 20px;
+}
+
+.api-key-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.button-group {
+    display: flex;
+    gap: 12px;
+}
+
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.btn-primary {
+    background-color: #3b82f6;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #2563eb;
+}
+
+.btn-secondary {
+    background-color: #64748b;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #475569;
+}
+
+/* ============================================
+   Chat Interface Styles
+   ============================================ */
+
+/* ChatGPT interface container */
+.chat-interface {
+    width: 100%;
+}
+
+.prompt-input,
+.result-input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+    color: #1e293b;
+    box-sizing: border-box;
+    resize: vertical;
+    background-color: #ffffff;
+}
+
+.prompt-input:focus,
+.result-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.result-input {
+    background-color: #f8fafc;
+    cursor: default;
+}
+
+.result-input:focus {
+    background-color: #ffffff;
+}
+
