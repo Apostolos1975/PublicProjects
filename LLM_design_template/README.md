@@ -17,8 +17,12 @@ A secure, minimal web application template with security-by-design principles an
 - **Tailwind CSS**: Utility-first CSS framework for rapid styling
 
 ### Functionality
+- **ChatGPT Interface**: Interactive chat interface with prompt input and result display
 - **Settings Panel**: Configurable settings accessible via cogwheel icon
-- **Secure API Key Storage**: Encrypted storage for sensitive API keys (e.g., ChatGPT API key)
+- **Secure API Key Storage**: Encrypted storage for sensitive API keys with password visibility toggle
+- **Model Selection**: Choose from predefined ChatGPT models (gpt-5.1, gpt-5, gpt-4.1, gpt-4.1-mini, gpt-4o, gpt-3.5-turbo)
+- **Temperature Control**: Adjustable temperature parameter (0-1) for response creativity
+- **Keyboard Shortcuts**: Ctrl+Enter to send prompts
 - **Modular Architecture**: Separated concerns with dedicated files for HTML, CSS, JavaScript, and security utilities
 
 ## File Structure
@@ -35,8 +39,9 @@ A secure, minimal web application template with security-by-design principles an
 ## Usage
 
 ### Basic Setup
-1. Open `index.html` in a web browser
+1. Open `index.html` in a web browser (or use a local web server for best results)
 2. The app will be centered on the page with a maximum width of 80% viewport
+3. Click the cogwheel icon in the upper right to configure settings
 
 ### Storing Data Securely
 
@@ -53,9 +58,28 @@ secureStorage.removeLocalStorage('key');
 
 ### Managing API Keys
 1. Click the cogwheel icon in the upper right corner
-2. Enter your API key in the "ChatGPT parameters" popup
-3. Click "Save Key" to store it securely
-4. Click "Delete Key" to remove the stored key
+2. In the "ChatGPT parameters" popup:
+   - **Load Key**: Click to load and display your stored API key (decrypted)
+   - **Save Key**: Enter your API key and click to store it securely (encrypted)
+   - **Delete Key**: Click to remove the stored API key
+   - **Eye Icon**: Toggle password visibility to view/hide the API key
+3. Your API key is automatically encrypted before storage
+
+### Using ChatGPT Interface
+1. Enter your prompt in the "Prompt" text area
+2. Click "Run" or press **Ctrl+Enter** to send the prompt to ChatGPT
+3. View the response in the "Result" text area
+4. Click "Clear" to clear both prompt and result fields
+
+### Configuring ChatGPT Parameters
+1. Open settings (cogwheel icon)
+2. **Temperature**: Adjust the temperature parameter (0-1, default: 0.3)
+   - Lower values (0-0.3): More focused and deterministic responses
+   - Higher values (0.7-1): More creative and varied responses
+3. **Model Selection**: Choose from available ChatGPT models
+   - Default: gpt-5.1
+   - Options: gpt-5.1, gpt-5, gpt-4.1, gpt-4.1-mini, gpt-4o, gpt-3.5-turbo
+4. Settings are automatically saved when changed
 
 ## Security Architecture
 
@@ -142,3 +166,5 @@ If you're an AI coding assistant working on this project, please read `AI_instru
 - For production use, consider using a more robust encryption library
 - The current implementation provides a good balance between security and usability for client-side applications
 - Remember that client-side encryption has inherent limitations - it protects against casual inspection and most browser extensions, but not against sophisticated malware or compromised JavaScript
+- **Development Tip**: For best results, use a local web server (e.g., `python -m http.server 8000`) instead of opening the file directly. This avoids `file://` protocol restrictions and ensures consistent encryption key derivation
+- **API Key Security**: Your API key is encrypted using AES-GCM 256-bit encryption before storage. The encryption key is derived from your origin, ensuring domain isolation
