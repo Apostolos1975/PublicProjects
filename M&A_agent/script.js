@@ -115,6 +115,75 @@ setTimeout(() => {
 }, 10);
 
 // ============================================
+// Menu Navigation Functionality
+// ============================================
+
+/**
+ * Switch to a different content section based on menu selection
+ * @param {number} sectionNumber - The section number (1-10)
+ */
+function switchToSection(sectionNumber) {
+    // Hide all content sections
+    const allSections = document.querySelectorAll('.content-section');
+    allSections.forEach(section => {
+        section.classList.remove('active');
+        section.style.display = 'none';
+    });
+    
+    // Show the selected section
+    const targetSection = document.getElementById(`section-${sectionNumber}`);
+    if (targetSection) {
+        targetSection.classList.add('active');
+        targetSection.style.display = 'block';
+    }
+    
+    // Update active menu item
+    const allNavLinks = document.querySelectorAll('.nav-link');
+    allNavLinks.forEach(link => {
+        link.classList.remove('active');
+    });
+    
+    const activeNavLink = document.querySelector(`.nav-link[data-section="${sectionNumber}"]`);
+    if (activeNavLink) {
+        activeNavLink.classList.add('active');
+    }
+    
+    // Save selected section to localStorage
+    localStorage.setItem('selected_section', sectionNumber.toString());
+}
+
+/**
+ * Load the last selected section from localStorage
+ * Defaults to section 3 (Due Diligence) if no selection is saved
+ */
+function loadSelectedSection() {
+    const savedSection = localStorage.getItem('selected_section');
+    const sectionNumber = savedSection ? parseInt(savedSection) : 3; // Default to Due Diligence
+    switchToSection(sectionNumber);
+}
+
+/**
+ * Set up menu item click handlers
+ */
+function setupMenuNavigation() {
+    const navLinks = document.querySelectorAll('.nav-link');
+    
+    navLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const sectionNumber = parseInt(link.getAttribute('data-section'));
+            if (sectionNumber) {
+                switchToSection(sectionNumber);
+            }
+        });
+    });
+}
+
+// Initialize menu navigation
+setupMenuNavigation();
+loadSelectedSection();
+
+// ============================================
 // Settings Popup Functionality
 // ============================================
 
@@ -312,52 +381,292 @@ temperatureInput.addEventListener('change', async () => {
 });
 
 // ============================================
+// Result Formatting Functionality
+// ============================================
+
+/**
+ * Generic function to format ChatGPT results for better presentation
+ * Handles numbered lists, bullet lists, and multi-level indentation
+ * Converts markdown-style formatting to formatted HTML
+ * 
+ * @param {string} rawText - Raw text from ChatGPT
+ * @returns {string} Formatted HTML string ready for display
+ */
+function FORMAT_CHATGPT_RESULT(rawText) {
+    if (!rawText) return '';
+    
+    // Split into lines for processing
+    const lines = rawText.split('\n');
+    const formattedLines = [];
+    const listStack = []; // Stack to track nested lists: [{type: 'ol'|'ul', level: number}]
+    
+    // Helper function to check if next non-empty line is a list item of the same type
+    function isNextLineListItem(startIndex, targetLevel, targetType) {
+        for (let j = startIndex + 1; j < lines.length; j++) {
+            const nextLine = lines[j].trim();
+            if (!nextLine) continue; // Skip empty lines
+            
+            const nextIndentMatch = lines[j].match(/^(\s*)/);
+            const nextIndentLevel = nextIndentMatch ? Math.floor(nextIndentMatch[1].length / 2) : 0;
+            
+            // Check if it's a list item at the same level and same type
+            const nextNumbered = nextLine.match(/^(\d+)[\.\)]\s+(.+)$/);
+            const nextBullet = nextLine.match(/^[-*•]\s+(.+)$/);
+            
+            if (targetType === 'ol' && nextNumbered && nextIndentLevel === targetLevel) {
+                return true;
+            }
+            if (targetType === 'ul' && nextBullet && nextIndentLevel === targetLevel) {
+                return true;
+            }
+            // If we hit a non-list item at same or shallower level, the list should close
+            if (nextIndentLevel <= targetLevel && !nextNumbered && !nextBullet) {
+                return false;
+            }
+        }
+        return false;
+    }
+    
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const trimmed = line.trim();
+        
+        // Detect indentation level (count leading spaces/tabs)
+        const indentMatch = line.match(/^(\s*)/);
+        const indentLevel = indentMatch ? Math.floor(indentMatch[1].length / 2) : 0;
+        
+        if (!trimmed) {
+            // Empty line - check if next non-empty line continues the list
+            const topList = listStack.length > 0 ? listStack[listStack.length - 1] : null;
+            if (topList) {
+                // Check if next line continues this list (same type and level)
+                if (!isNextLineListItem(i, topList.level, topList.type)) {
+                    // Next line won't continue the list, so close it
+                    while (listStack.length > 0) {
+                        const list = listStack.pop();
+                        formattedLines.push(`</${list.type}>`);
+                    }
+                }
+                // If next line continues the list, keep it open (don't close)
+            }
+            formattedLines.push('<br>');
+            continue;
+        }
+        
+        // Detect numbered list (1. 2. 3. or 1) 2) 3))
+        const numberedMatch = trimmed.match(/^(\d+)[\.\)]\s+(.+)$/);
+        // Detect bullet list (- * •)
+        const bulletMatch = trimmed.match(/^[-*•]\s+(.+)$/);
+        
+        // Close lists that are at deeper levels or different types at same level
+        while (listStack.length > 0) {
+            const topList = listStack[listStack.length - 1];
+            // Close if deeper level, or same level but different type
+            if (topList.level > indentLevel || 
+                (topList.level === indentLevel && numberedMatch && topList.type !== 'ol') ||
+                (topList.level === indentLevel && bulletMatch && topList.type !== 'ul')) {
+                const list = listStack.pop();
+                formattedLines.push(`</${list.type}>`);
+            } else {
+                break;
+            }
+        }
+        
+        if (numberedMatch) {
+            // Numbered list item
+            const content = numberedMatch[2];
+            
+            // Check if we need to open a new numbered list
+            // Only open if: no list exists, or top list is not 'ol', or top list is different level
+            if (listStack.length === 0 || 
+                listStack[listStack.length - 1].type !== 'ol' || 
+                listStack[listStack.length - 1].level !== indentLevel) {
+                formattedLines.push('<ol>');
+                listStack.push({ type: 'ol', level: indentLevel });
+            }
+            
+            formattedLines.push(`<li>${formatInlineMarkdown(content)}</li>`);
+        } else if (bulletMatch) {
+            // Bullet list item
+            const content = bulletMatch[1];
+            
+            // Check if we need to open a new bullet list
+            if (listStack.length === 0 || 
+                listStack[listStack.length - 1].type !== 'ul' || 
+                listStack[listStack.length - 1].level !== indentLevel) {
+                formattedLines.push('<ul>');
+                listStack.push({ type: 'ul', level: indentLevel });
+            }
+            
+            formattedLines.push(`<li>${formatInlineMarkdown(content)}</li>`);
+        } else {
+            // Regular text line (not a list item)
+            // Close all open lists - headings/text should not be inside lists
+            while (listStack.length > 0) {
+                const list = listStack.pop();
+                formattedLines.push(`</${list.type}>`);
+            }
+            formattedLines.push(`<p>${formatInlineMarkdown(trimmed)}</p>`);
+        }
+    }
+    
+    // Close any remaining open lists
+    while (listStack.length > 0) {
+        const list = listStack.pop();
+        formattedLines.push(`</${list.type}>`);
+    }
+    
+    return formattedLines.join('');
+}
+
+/**
+ * Format inline markdown elements (bold, italic, code)
+ * @param {string} text - Text to format
+ * @returns {string} Formatted HTML
+ */
+function formatInlineMarkdown(text) {
+    // Escape HTML first
+    let formatted = escapeHtml(text);
+    
+    // Format code blocks (`code`)
+    formatted = formatted.replace(/`([^`]+?)`/g, '<code>$1</code>');
+    
+    // Format bold text (**text**)
+    formatted = formatted.replace(/\*\*([^*]+?)\*\*/g, '<strong>$1</strong>');
+    
+    // Format italic text (*text*) - but not if it's part of **
+    formatted = formatted.replace(/(?<!\*)\*([^*]+?)\*(?!\*)/g, '<em>$1</em>');
+    
+    return formatted;
+}
+
+/**
+ * Escape HTML special characters to prevent XSS
+ * @param {string} text - Text to escape
+ * @returns {string} Escaped text
+ */
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// ============================================
 // ChatGPT Interface Functionality
 // ============================================
 
-// Get DOM elements for chat interface
-const promptInput = document.getElementById('promptInput');
-const resultInput = document.getElementById('resultInput');
-const runBtn = document.getElementById('runBtn');
-const clearBtn = document.getElementById('clearBtn');
+// Get DOM elements for Due Diligence chat interface
+// Naming convention: <sectionName><ElementType> (e.g., dueDiligencePromptInput)
+const dueDiligencePromptInput = document.getElementById('dueDiligencePromptInput');
+const dueDiligenceResultInput = document.getElementById('dueDiligenceResultInput');
+const dueDiligenceRunBtn = document.getElementById('dueDiligenceRunBtn');
+const dueDiligenceClearBtn = document.getElementById('dueDiligenceClearBtn');
+const dueDiligencePromptSelect = document.getElementById('dueDiligencePromptSelect');
 
 /**
  * Run button handler - Sends prompt to ChatGPT API
  */
-runBtn.addEventListener('click', async () => {
-    await sendPrompt();
+dueDiligenceRunBtn.addEventListener('click', async () => {
+    await sendDueDiligencePrompt();
 });
 
 /**
- * Clear button handler - Clears both prompt and result textareas
+ * Clear button handler - Clears both prompt and result
  */
-clearBtn.addEventListener('click', () => {
-    promptInput.value = '';
-    resultInput.value = '';
+dueDiligenceClearBtn.addEventListener('click', () => {
+    dueDiligencePromptInput.value = '';
+    dueDiligenceResultInput.innerHTML = '';
+    // Also reset the dropdown
+    if (dueDiligencePromptSelect) {
+        dueDiligencePromptSelect.value = '';
+    }
 });
 
 /**
  * Keyboard shortcut: Ctrl+Enter to send prompt
  */
-promptInput.addEventListener('keydown', async (e) => {
+dueDiligencePromptInput.addEventListener('keydown', async (e) => {
     if (e.ctrlKey && e.key === 'Enter') {
         e.preventDefault();
-        await sendPrompt();
+        await sendDueDiligencePrompt();
     }
 });
 
 /**
- * Send prompt to ChatGPT API and display response
- * Retrieves API key and temperature from secure storage
- * Handles errors gracefully with user-friendly messages
+ * Populate the prompt template dropdown with available templates
  */
-async function sendPrompt() {
-    const prompt = promptInput.value.trim();
+function populateDueDiligencePromptDropdown() {
+    if (!dueDiligencePromptSelect) return;
     
-    if (!prompt) {
+    // Get prompt templates from prompts.js
+    const templates = PROMPT_GET_DUE_DILIGENCE_TEMPLATES();
+    
+    // Clear existing options (except the first placeholder)
+    dueDiligencePromptSelect.innerHTML = '<option value="">-- Select a prompt template --</option>';
+    
+    // Add template options
+    templates.forEach(template => {
+        const option = document.createElement('option');
+        option.value = template.id;
+        option.textContent = template.name;
+        dueDiligencePromptSelect.appendChild(option);
+    });
+}
+
+/**
+ * Handle prompt template selection from dropdown
+ */
+function setupDueDiligencePromptSelection() {
+    if (!dueDiligencePromptSelect) return;
+    
+    dueDiligencePromptSelect.addEventListener('change', (e) => {
+        const selectedTemplateId = e.target.value;
+        
+        if (!selectedTemplateId) {
+            // If "Select a prompt template" is selected, do nothing
+            return;
+        }
+        
+        // Get the selected template
+        const templates = PROMPT_GET_DUE_DILIGENCE_TEMPLATES();
+        const selectedTemplate = templates.find(t => t.id === selectedTemplateId);
+        
+        if (selectedTemplate && dueDiligencePromptInput) {
+            // Populate the prompt input with the selected template
+            dueDiligencePromptInput.value = selectedTemplate.prompt;
+            // Focus on the input so user can make adjustments
+            dueDiligencePromptInput.focus();
+            // Move cursor to end of text
+            dueDiligencePromptInput.setSelectionRange(
+                dueDiligencePromptInput.value.length,
+                dueDiligencePromptInput.value.length
+            );
+        }
+    });
+}
+
+/**
+ * Send Due Diligence prompt to ChatGPT API and display response
+ * Retrieves API key and temperature from secure storage
+ * Automatically includes company details in the prompt
+ * Handles errors gracefully with user-friendly messages
+ * 
+ * Function naming convention: send<SectionName>Prompt()
+ */
+async function sendDueDiligencePrompt() {
+    const userPrompt = dueDiligencePromptInput.value.trim();
+    
+    if (!userPrompt) {
         alert('Please enter a prompt');
         return;
     }
+
+    // Get company data to include in prompt
+    const companyData = getCompanyData();
+    
+    // Build the complete prompt using the prompts.js file
+    // PROMPT_BUILD_COMPLETE is defined in prompts.js
+    const fullPrompt = PROMPT_BUILD_COMPLETE(userPrompt, companyData);
 
     // Get API key
     let apiKey;
@@ -389,9 +698,9 @@ async function sendPrompt() {
     }
 
     // Disable button and show loading
-    runBtn.disabled = true;
-    runBtn.textContent = 'Running...';
-    resultInput.value = 'Sending request...';
+    dueDiligenceRunBtn.disabled = true;
+    dueDiligenceRunBtn.textContent = 'Running...';
+    dueDiligenceResultInput.innerHTML = '<p style="color: #64748b; font-style: italic;">Sending request...</p>';
 
     try {
         const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -405,7 +714,7 @@ async function sendPrompt() {
                 messages: [
                     {
                         role: 'user',
-                        content: prompt
+                        content: fullPrompt
                     }
                 ],
                 max_tokens: 1000,
@@ -419,15 +728,32 @@ async function sendPrompt() {
         }
 
         const data = await response.json();
-        const result = data.choices[0]?.message?.content || 'No response received';
-        resultInput.value = result;
+        const rawResult = data.choices[0]?.message?.content || 'No response received';
+        
+        // Log raw response from ChatGPT for comparison with formatted output
+        console.log('=== RAW CHATGPT RESPONSE ===');
+        console.log(rawResult);
+        console.log('=== END RAW RESPONSE ===');
+        
+        // TEMPORARILY DISABLED: Display raw result without any formatting for comparison
+        // Format the result using the generic formatting function
+        // const formattedResult = FORMAT_CHATGPT_RESULT(rawResult);
+        
+        // Log formatted result for comparison
+        // console.log('=== FORMATTED RESULT (HTML) ===');
+        // console.log(formattedResult);
+        // console.log('=== END FORMATTED RESULT ===');
+        
+        // Display raw result as-is (escape HTML and preserve line breaks)
+        const rawResultHtml = escapeHtml(rawResult).replace(/\n/g, '<br>');
+        dueDiligenceResultInput.innerHTML = rawResultHtml;
     } catch (error) {
         console.error('Error calling ChatGPT API:', error);
-        resultInput.value = `Error: ${error.message}`;
+        dueDiligenceResultInput.innerHTML = `<p style="color: #ef4444;"><strong>Error:</strong> ${escapeHtml(error.message)}</p>`;
     } finally {
         // Re-enable button
-        runBtn.disabled = false;
-        runBtn.textContent = 'Run';
+        dueDiligenceRunBtn.disabled = false;
+        dueDiligenceRunBtn.textContent = 'Run';
     }
 }
 
@@ -713,10 +1039,16 @@ if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
         loadCompanyData();
         setupCompanyDataAutoSave();
+        // Set up Due Diligence prompt dropdown
+        populateDueDiligencePromptDropdown();
+        setupDueDiligencePromptSelection();
     });
 } else {
     // DOM is already loaded
     loadCompanyData();
     setupCompanyDataAutoSave();
+    // Set up Due Diligence prompt dropdown
+    populateDueDiligencePromptDropdown();
+    setupDueDiligencePromptSelection();
 }
 

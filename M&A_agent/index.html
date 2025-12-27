@@ -242,30 +242,117 @@
             </div>
         </div>
 
-        <!-- Main content container with chat interface -->
-        <div class="container mx-auto px-4 py-8">
-            <div class="chat-interface">
-            <!-- Prompt input area for ChatGPT queries -->
-            <div class="form-group">
-                <label for="promptInput">Prompt</label>
-                <textarea id="promptInput" class="prompt-input" rows="4" placeholder="Enter your prompt here..."></textarea>
+        <!-- Main content area - Different sections shown based on menu selection -->
+        <div class="main-content-sections">
+            <!-- Section 1: Deal Sourcing & Pipeline Management -->
+            <div class="content-section" id="section-1" style="display: none;">
+                <div class="container">
+                    <h2>Deal Sourcing & Pipeline Management</h2>
+                    <p>Content for Deal Sourcing & Pipeline Management will be implemented here.</p>
+                </div>
             </div>
-            <!-- Action buttons for chat interface -->
-            <div class="button-group">
-                <button id="runBtn" class="btn btn-primary">Run</button>
-                <button id="clearBtn" class="btn btn-secondary">Clear</button>
+
+            <!-- Section 2: Financial Analysis & Valuation -->
+            <div class="content-section" id="section-2" style="display: none;">
+                <div class="container">
+                    <h2>Financial Analysis & Valuation</h2>
+                    <p>Content for Financial Analysis & Valuation will be implemented here.</p>
+                </div>
             </div>
-            <!-- Results display area - Read-only textarea showing ChatGPT responses -->
-            <div class="form-group">
-                <label for="resultInput">Result</label>
-                <textarea id="resultInput" class="result-input" rows="8" placeholder="Results will appear here..." readonly></textarea>
+
+            <!-- Section 3: Due Diligence Management (Current ChatGPT interface) -->
+            <div class="content-section active" id="section-3">
+                <div class="container">
+                    <div class="chat-interface">
+                        <!-- Prompt template selection dropdown -->
+                        <div class="form-group">
+                            <label for="dueDiligencePromptSelect">Select a prompt template (optional)</label>
+                            <select id="dueDiligencePromptSelect" class="prompt-select">
+                                <option value="">-- Select a prompt template --</option>
+                                <!-- Options will be populated by JavaScript -->
+                            </select>
+                        </div>
+                        <!-- Prompt input area for ChatGPT queries -->
+                        <div class="form-group">
+                            <label for="dueDiligencePromptInput">Prompt</label>
+                            <textarea id="dueDiligencePromptInput" class="prompt-input" rows="4" placeholder="Enter your prompt here..."></textarea>
+                        </div>
+                        <!-- Action buttons for chat interface -->
+                        <div class="button-group">
+                            <button id="dueDiligenceRunBtn" class="btn btn-primary">Run</button>
+                            <button id="dueDiligenceClearBtn" class="btn btn-secondary">Clear</button>
+                        </div>
+                        <!-- Results display area - Formatted HTML display for ChatGPT responses -->
+                        <div class="form-group">
+                            <label for="dueDiligenceResultInput">Result</label>
+                            <div id="dueDiligenceResultInput" class="result-display" placeholder="Results will appear here..."></div>
+                        </div>
+                    </div>
+                </div>
             </div>
+
+            <!-- Section 4: Collaboration & Governance -->
+            <div class="content-section" id="section-4" style="display: none;">
+                <div class="container">
+                    <h2>Collaboration & Governance</h2>
+                    <p>Content for Collaboration & Governance will be implemented here.</p>
+                </div>
+            </div>
+
+            <!-- Section 5: Deal Structuring & Execution -->
+            <div class="content-section" id="section-5" style="display: none;">
+                <div class="container">
+                    <h2>Deal Structuring & Execution</h2>
+                    <p>Content for Deal Structuring & Execution will be implemented here.</p>
+                </div>
+            </div>
+
+            <!-- Section 6: Post-Merger Integration (PMI) -->
+            <div class="content-section" id="section-6" style="display: none;">
+                <div class="container">
+                    <h2>Post-Merger Integration (PMI)</h2>
+                    <p>Content for Post-Merger Integration will be implemented here.</p>
+                </div>
+            </div>
+
+            <!-- Section 7: Intelligence & Benchmarking -->
+            <div class="content-section" id="section-7" style="display: none;">
+                <div class="container">
+                    <h2>Intelligence & Benchmarking</h2>
+                    <p>Content for Intelligence & Benchmarking will be implemented here.</p>
+                </div>
+            </div>
+
+            <!-- Section 8: Security, Compliance & Trust -->
+            <div class="content-section" id="section-8" style="display: none;">
+                <div class="container">
+                    <h2>Security, Compliance & Trust</h2>
+                    <p>Content for Security, Compliance & Trust will be implemented here.</p>
+                </div>
+            </div>
+
+            <!-- Section 9: Automation & AI -->
+            <div class="content-section" id="section-9" style="display: none;">
+                <div class="container">
+                    <h2>Automation & AI</h2>
+                    <p>Content for Automation & AI will be implemented here.</p>
+                </div>
+            </div>
+
+            <!-- Section 10: Integration & Extensibility -->
+            <div class="content-section" id="section-10" style="display: none;">
+                <div class="container">
+                    <h2>Integration & Extensibility</h2>
+                    <p>Content for Integration & Extensibility will be implemented here.</p>
+                </div>
             </div>
         </div>
     </div>
     <!-- External JavaScript files -->
     <!-- Secure storage utility for encrypted local storage -->
     <script src="secureStorage.js"></script>
+    <!-- Prompts management - All prompts stored here -->
+    <script src="prompts.js"></script>
     <!-- Main application logic -->
     <script src="script.js"></script>
 </body>
