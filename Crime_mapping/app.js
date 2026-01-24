@@ -20,6 +20,8 @@ let allEvents = [];
 let crimeTypeSortMode = 'frequency'; // 'frequency' or 'alphabetical'
 let regionSortMode = 'alphabetical'; // 'frequency' or 'alphabetical'
 let filterListenersSetup = false; // Track if filter listeners have been set up
+let crimeChart = null; // Chart.js instance
+let chartInterval = 'days'; // 'days' or 'weeks'
 const filters = {
     dateFrom: null,
     dateTo: null,
@@ -490,13 +492,13 @@ function initializeFilters() {
         
         // Populate crime type filters
         console.log('[FILTERS] Getting crime types with counts...');
-        const crimeTypes = getCrimeTypesWithCounts();
+        const crimeTypes = getCrimeTypesWithCounts('', filters.dateFrom, filters.dateTo);
         console.log('[FILTERS] Crime types found:', crimeTypes.length);
         populateCrimeTypeFilters(crimeTypes);
         
         // Populate region filter
         console.log('[FILTERS] Getting unique regions...');
-        const regions = getUniqueRegions(regionSortMode);
+        const regions = getUniqueRegions(regionSortMode, filters.dateFrom, filters.dateTo);
         console.log('[FILTERS] Regions found:', regions.length);
         populateRegionFilter(regions);
         
@@ -512,11 +514,25 @@ function initializeFilters() {
     }
 }
 
-function getCrimeTypesWithCounts(regionFilter = '') {
-    // Filter events by region if specified
-    const eventsToCount = regionFilter 
-        ? allEvents.filter(event => event.Region === regionFilter)
-        : allEvents;
+function getCrimeTypesWithCounts(regionFilter = '', dateFrom = null, dateTo = null) {
+    // Filter events by date range first
+    let eventsToCount = allEvents.filter(event => {
+        if (dateFrom || dateTo) {
+            const eventDate = new Date(event.datetime);
+            if (dateFrom && eventDate < dateFrom) {
+                return false;
+            }
+            if (dateTo && eventDate > dateTo) {
+                return false;
+            }
+        }
+        return true;
+    });
+    
+    // Then filter by region if specified
+    if (regionFilter) {
+        eventsToCount = eventsToCount.filter(event => event.Region === regionFilter);
+    }
     
     const typeCounts = {};
     eventsToCount.forEach(event => {
@@ -580,9 +596,23 @@ function populateCrimeTypeFilters(crimeTypes) {
     });
 }
 
-function getUniqueRegions(sortMode = 'alphabetical') {
+function getUniqueRegions(sortMode = 'alphabetical', dateFrom = null, dateTo = null) {
+    // Filter events by date range first
+    let eventsToCount = allEvents.filter(event => {
+        if (dateFrom || dateTo) {
+            const eventDate = new Date(event.datetime);
+            if (dateFrom && eventDate < dateFrom) {
+                return false;
+            }
+            if (dateTo && eventDate > dateTo) {
+                return false;
+            }
+        }
+        return true;
+    });
+    
     const regionCounts = {};
-    allEvents.forEach(event => {
+    eventsToCount.forEach(event => {
         if (event.Region) {
             const region = event.Region;
             regionCounts[region] = (regionCounts[region] || 0) + 1;
@@ -620,30 +650,43 @@ function populateRegionFilter(regions) {
 }
 
 function refreshRegionFilter() {
-    const regions = getUniqueRegions(regionSortMode);
+    const regions = getUniqueRegions(regionSortMode, filters.dateFrom, filters.dateTo);
     populateRegionFilter(regions);
+}
+
+function refreshFilterCounts() {
+    // Refresh both crime type and region filters with current date filters
+    refreshCrimeTypeFilters(filters.region);
+    refreshRegionFilter();
 }
 
 function setupFilterListeners() {
     // Date filters
     document.getElementById('date-from').addEventListener('change', (e) => {
         filters.dateFrom = e.target.value ? new Date(e.target.value) : null;
+        // Refresh filter lists to update counters based on date range
+        refreshFilterCounts();
         applyFilters();
+        updateChart();
     });
     
     document.getElementById('date-to').addEventListener('change', (e) => {
         filters.dateTo = e.target.value ? new Date(e.target.value + 'T23:59:59') : null;
+        // Refresh filter lists to update counters based on date range
+        refreshFilterCounts();
         applyFilters();
+        updateChart();
     });
     
     // Region filter
     document.getElementById('region-filter').addEventListener('change', (e) => {
         filters.region = e.target.value;
-        // Regenerate crime type filters with region-specific counts
+        // Regenerate crime type filters with region-specific counts (respects date filters)
         refreshCrimeTypeFilters(filters.region);
         // Zoom to region if selected
         zoomToRegion(filters.region);
         applyFilters();
+        updateChart();
     });
     
     // Clear filters button
@@ -700,8 +743,8 @@ function refreshCrimeTypeFilters(regionFilter = '', selectAll = false) {
     const checkboxes = document.querySelectorAll('#crime-type-filters input[type="checkbox"]:checked');
     checkboxes.forEach(cb => selectedTypes.add(cb.value));
     
-    // Repopulate with new sorting and region filter
-    const crimeTypes = getCrimeTypesWithCounts(regionFilter);
+    // Repopulate with new sorting, region filter, and date filters
+    const crimeTypes = getCrimeTypesWithCounts(regionFilter, filters.dateFrom, filters.dateTo);
     const container = document.getElementById('crime-type-filters');
     container.innerHTML = '';
     
@@ -808,6 +851,11 @@ function applyFilters() {
     });
     
     renderMarkers(filteredEvents);
+    
+    // Update chart if initialized
+    if (crimeChart) {
+        updateChart();
+    }
 }
 
 function clearFilters() {
@@ -824,8 +872,8 @@ function clearFilters() {
     // Zoom back to show all of Sweden
     zoomToRegion('');
     
-    // Regenerate crime type filters with all data (no region filter)
-    refreshCrimeTypeFilters('');
+    // Regenerate crime type and region filters with all data (no filters)
+    refreshFilterCounts();
     
     // Check all crime type checkboxes
     const checkboxes = document.querySelectorAll('#crime-type-filters input[type="checkbox"]');
@@ -835,6 +883,231 @@ function clearFilters() {
     });
     
     applyFilters();
+}
+
+// ===========================
+// Chart Functions
+// ===========================
+
+function initChart() {
+    const ctx = document.getElementById('crime-chart');
+    if (!ctx) {
+        console.error('[CHART] Chart canvas element not found');
+        return;
+    }
+    
+    console.log('[CHART] Initializing chart...');
+    
+    crimeChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Antal brott',
+                data: [],
+                borderColor: '#3498db',
+                backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                },
+                x: {
+                    ticks: {
+                        maxRotation: 45,
+                        minRotation: 45
+                    }
+                }
+            }
+        }
+    });
+    
+    // Set up interval selector listeners
+    document.querySelectorAll('input[name="chart-interval"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            chartInterval = e.target.value;
+            updateChart();
+        });
+    });
+    
+    console.log('[CHART] Chart initialized');
+    updateChart();
+}
+
+function updateChart() {
+    if (!crimeChart) {
+        console.log('[CHART] Chart not initialized, skipping update');
+        return;
+    }
+    
+    console.log('[CHART] Updating chart...');
+    console.log('[CHART] Selected crime types:', Array.from(filters.crimeTypes));
+    console.log('[CHART] Date range:', filters.dateFrom, 'to', filters.dateTo);
+    
+    // Get events that match selected crime types
+    let eventsToChart = allEvents.filter(event => {
+        // Filter by crime type
+        if (filters.crimeTypes.size > 0 && !filters.crimeTypes.has(event.type)) {
+            return false;
+        }
+        
+        // Filter by region if selected
+        if (filters.region && event.Region !== filters.region) {
+            return false;
+        }
+        
+        return true;
+    });
+    
+    // Determine date range for chart
+    let startDate, endDate;
+    if (filters.dateFrom && filters.dateTo) {
+        startDate = new Date(filters.dateFrom);
+        endDate = new Date(filters.dateTo);
+    } else if (filters.dateFrom) {
+        startDate = new Date(filters.dateFrom);
+        endDate = new Date();
+    } else if (filters.dateTo) {
+        // If only end date, go back 30 days
+        endDate = new Date(filters.dateTo);
+        startDate = new Date(endDate);
+        startDate.setDate(startDate.getDate() - 30);
+    } else {
+        // No date filter - use all events or last 30 days
+        if (eventsToChart.length > 0) {
+            // Find earliest and latest dates from events
+            const dates = eventsToChart
+                .map(e => new Date(e.datetime))
+                .filter(d => !isNaN(d.getTime()))
+                .sort((a, b) => a - b);
+            
+            if (dates.length > 0) {
+                startDate = dates[0];
+                endDate = dates[dates.length - 1];
+            } else {
+                endDate = new Date();
+                startDate = new Date(endDate);
+                startDate.setDate(startDate.getDate() - 30);
+            }
+        } else {
+            endDate = new Date();
+            startDate = new Date(endDate);
+            startDate.setDate(startDate.getDate() - 30);
+        }
+    }
+    
+    // Normalize dates
+    startDate.setHours(0, 0, 0, 0);
+    endDate.setHours(23, 59, 59, 999);
+    
+    // Filter events by date range
+    eventsToChart = eventsToChart.filter(event => {
+        const eventDate = new Date(event.datetime);
+        return eventDate >= startDate && eventDate <= endDate;
+    });
+    
+    console.log('[CHART] Events to chart:', eventsToChart.length);
+    console.log('[CHART] Date range:', startDate, 'to', endDate);
+    console.log('[CHART] Interval:', chartInterval);
+    
+    // Group events by time interval
+    const dataMap = new Map();
+    const currentDate = new Date(startDate);
+    
+    // Initialize all intervals in the range
+    while (currentDate <= endDate) {
+        let key;
+        if (chartInterval === 'weeks') {
+            // Get week start (Monday)
+            const weekStart = new Date(currentDate);
+            const day = weekStart.getDay();
+            const diff = weekStart.getDate() - day + (day === 0 ? -6 : 1); // Adjust to Monday
+            weekStart.setDate(diff);
+            weekStart.setHours(0, 0, 0, 0);
+            key = weekStart.toISOString().split('T')[0];
+        } else {
+            // Days
+            key = currentDate.toISOString().split('T')[0];
+        }
+        
+        if (!dataMap.has(key)) {
+            dataMap.set(key, 0);
+        }
+        
+        if (chartInterval === 'weeks') {
+            // Move to next week
+            currentDate.setDate(currentDate.getDate() + 7);
+        } else {
+            // Move to next day
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+    }
+    
+    // Count events per interval
+    eventsToChart.forEach(event => {
+        const eventDate = new Date(event.datetime);
+        let key;
+        
+        if (chartInterval === 'weeks') {
+            // Get week start (Monday)
+            const weekStart = new Date(eventDate);
+            const day = weekStart.getDay();
+            const diff = weekStart.getDate() - day + (day === 0 ? -6 : 1); // Adjust to Monday
+            weekStart.setDate(diff);
+            weekStart.setHours(0, 0, 0, 0);
+            key = weekStart.toISOString().split('T')[0];
+        } else {
+            // Days
+            key = eventDate.toISOString().split('T')[0];
+        }
+        
+        if (dataMap.has(key)) {
+            dataMap.set(key, dataMap.get(key) + 1);
+        }
+    });
+    
+    // Convert to arrays for chart
+    const sortedKeys = Array.from(dataMap.keys()).sort();
+    const labels = sortedKeys.map(key => {
+        const date = new Date(key);
+        if (chartInterval === 'weeks') {
+            // Format as "Week of YYYY-MM-DD"
+            return `V. ${date.toLocaleDateString('sv-SE', { month: 'short', day: 'numeric' })}`;
+        } else {
+            // Format as "YYYY-MM-DD" or shorter
+            return date.toLocaleDateString('sv-SE', { month: 'short', day: 'numeric' });
+        }
+    });
+    const data = sortedKeys.map(key => dataMap.get(key));
+    
+    console.log('[CHART] Chart data:', { labels: labels.length, dataPoints: data.length });
+    
+    // Update chart
+    crimeChart.data.labels = labels;
+    crimeChart.data.datasets[0].data = data;
+    crimeChart.update();
+    
+    console.log('[CHART] Chart updated');
 }
 
 // ===========================
@@ -1078,6 +1351,11 @@ async function cleanAndRefetch() {
         // Re-initialize filters and update map
         initializeFilters();
         
+        // Update chart
+        if (crimeChart) {
+            updateChart();
+        }
+        
         // Update data range info if modal is open
         if (document.getElementById('admin-modal').classList.contains('active')) {
             updateDataRangeInfo();
@@ -1292,6 +1570,11 @@ async function init() {
     console.log('[INIT] Starting initialization...');
     
     try {
+        // Initialize chart
+        console.log('[INIT] Initializing chart...');
+        initChart();
+        console.log('[INIT] Chart initialized');
+        
         // Initialize map
         console.log('[INIT] Initializing map...');
         initMap();
@@ -1326,6 +1609,11 @@ async function init() {
         console.log('[INIT] Initializing filters...');
         initializeFilters();
         console.log('[INIT] Filters initialized');
+        
+        // Update chart after filters are initialized
+        if (crimeChart) {
+            updateChart();
+        }
         
         // Fetch new data if needed
         const shouldFetchData = shouldFetch(stored.lastFetch);

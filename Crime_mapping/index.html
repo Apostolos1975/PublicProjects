@@ -16,8 +16,27 @@
     
     <!-- Custom CSS -->
     <link rel="stylesheet" href="styles.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
+    <!-- Chart Container -->
+    <div id="chart-container" class="chart-container">
+        <div class="chart-header">
+            <h3>Brottsfrekvens över tid</h3>
+            <div class="chart-controls">
+                <label>
+                    <input type="radio" name="chart-interval" value="days" checked> Dagar
+                </label>
+                <label>
+                    <input type="radio" name="chart-interval" value="weeks"> Veckor
+                </label>
+            </div>
+        </div>
+        <canvas id="crime-chart"></canvas>
+    </div>
+    
     <!-- Filter Panel -->
     <div id="filter-panel" class="filter-panel">
         <div class="filter-header">
