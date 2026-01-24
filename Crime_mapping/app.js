@@ -14,6 +14,7 @@ const STORAGE_KEY = 'crimemap_data';
 // ===========================
 
 let map = null;
+let markerClusterGroup = null;
 let markers = [];
 let allEvents = [];
 let crimeTypeSortMode = 'frequency'; // 'frequency' or 'alphabetical'
@@ -26,10 +27,11 @@ const filters = {
 };
 
 // Create reverse mapping once: Municipality -> Region (for performance)
+// Using lowercase keys for case-insensitive lookup
 const municipalityToRegion = {};
 Object.entries(REGION_MUNICIPALITY_MAPPING).forEach(([region, municipalities]) => {
     municipalities.forEach(municipality => {
-        municipalityToRegion[municipality] = region;
+        municipalityToRegion[municipality.toLowerCase()] = region;
     });
 });
 
@@ -115,11 +117,41 @@ function enrichEventsWithLocation(events) {
             }
         }
         
-        // Fill in empty Region field using Municipality if available
+        // Fill in empty Region field using Municipality if available (case-insensitive)
         if (!event.Region && event.Municipality) {
-            const matchedRegion = municipalityToRegion[event.Municipality];
+            const matchedRegion = municipalityToRegion[event.Municipality.toLowerCase()];
             if (matchedRegion) {
                 event.Region = matchedRegion;
+            }
+        }
+        
+        // Fill in empty Municipality field with region capital if Region is available
+        if (!event.Municipality && event.Region && REGION_CAPITALS[event.Region]) {
+            event.Municipality = REGION_CAPITALS[event.Region];
+        }
+        
+        // Replace GPS coordinates with municipality center coordinates
+        if (event.Municipality) {
+            // Try exact match first, then case-insensitive
+            let coords = MUNICIPALITY_COORDINATES[event.Municipality];
+            
+            // If no exact match, try case-insensitive lookup
+            if (!coords) {
+                const municipalityLower = event.Municipality.toLowerCase();
+                const matchingKey = Object.keys(MUNICIPALITY_COORDINATES).find(
+                    key => key.toLowerCase() === municipalityLower
+                );
+                if (matchingKey) {
+                    coords = MUNICIPALITY_COORDINATES[matchingKey];
+                }
+            }
+            
+            // Replace GPS coordinates if municipality coordinates found
+            if (coords) {
+                if (!event.location) {
+                    event.location = {};
+                }
+                event.location.gps = `${coords[0]}, ${coords[1]}`;
             }
         }
         
@@ -228,6 +260,29 @@ function initMap() {
         attribution: '© OpenStreetMap contributors',
         maxZoom: 18
     }).addTo(map);
+    
+    // Initialize marker cluster group
+    markerClusterGroup = L.markerClusterGroup({
+        maxClusterRadius: 80,
+        spiderfyOnMaxZoom: true,
+        showCoverageOnHover: false,
+        zoomToBoundsOnClick: true,
+        iconCreateFunction: function(cluster) {
+            const count = cluster.getChildCount();
+            let size = 'small';
+            if (count >= 100) {
+                size = 'large';
+            } else if (count >= 10) {
+                size = 'medium';
+            }
+            return L.divIcon({
+                html: '<div><span>' + count + '</span></div>',
+                className: 'marker-cluster marker-cluster-' + size,
+                iconSize: L.point(40, 40)
+            });
+        }
+    });
+    map.addLayer(markerClusterGroup);
 }
 
 function getMarkerColor(crimeType) {
@@ -270,11 +325,11 @@ function createPopupContent(event) {
 }
 
 function renderMarkers(events) {
-    // Clear existing markers
-    markers.forEach(marker => map.removeLayer(marker));
+    // Clear existing markers from cluster group
+    markerClusterGroup.clearLayers();
     markers = [];
     
-    // Add new markers
+    // Add new markers to cluster group
     events.forEach(event => {
         // Parse GPS coordinates
         if (!event.location?.gps) return;
@@ -287,9 +342,9 @@ function renderMarkers(events) {
         const icon = createCustomIcon(color);
         
         const marker = L.marker([lat, lng], { icon })
-            .bindPopup(createPopupContent(event))
-            .addTo(map);
+            .bindPopup(createPopupContent(event));
         
+        markerClusterGroup.addLayer(marker);
         markers.push(marker);
     });
     

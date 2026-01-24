@@ -652,6 +652,56 @@ body {
     }
 }
 
+/* Marker Cluster Styles */
+.marker-cluster {
+    background-color: rgba(52, 152, 219, 0.6);
+    border-radius: 50%;
+}
+
+.marker-cluster div {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: rgba(52, 152, 219, 0.8);
+    text-align: center;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 3px solid white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.marker-cluster span {
+    color: white;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.marker-cluster-small {
+    background-color: rgba(52, 152, 219, 0.6);
+}
+
+.marker-cluster-small div {
+    background-color: rgba(52, 152, 219, 0.8);
+}
+
+.marker-cluster-medium {
+    background-color: rgba(231, 76, 60, 0.6);
+}
+
+.marker-cluster-medium div {
+    background-color: rgba(231, 76, 60, 0.8);
+}
+
+.marker-cluster-large {
+    background-color: rgba(142, 68, 173, 0.6);
+}
+
+.marker-cluster-large div {
+    background-color: rgba(142, 68, 173, 0.8);
+}
+
 /* Scrollbar Styles */
 .filter-content::-webkit-scrollbar,
 .crime-type-list::-webkit-scrollbar {
