@@ -489,6 +489,46 @@ body {
     line-height: 1.5;
 }
 
+.data-range-info {
+    margin: 12px 0;
+}
+
+.data-range-info p {
+    margin: 6px 0;
+    font-size: 14px;
+    color: #333;
+}
+
+.data-range-info strong {
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+.data-range-info span {
+    color: #555;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+}
+
+.date-range-inputs {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.date-range-inputs label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.date-range-inputs label strong {
+    font-size: 13px;
+    color: #2c3e50;
+    font-weight: 600;
+}
+
 .admin-btn {
     width: 100%;
     padding: 12px 20px;

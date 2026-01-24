@@ -104,6 +104,34 @@
             </div>
             <div class="admin-modal-body">
                 <div class="admin-section">
+                    <h3>Data Information</h3>
+                    <div id="data-range-info" class="data-range-info">
+                        <p><strong>Tidigaste händelse:</strong> <span id="earliest-date">-</span></p>
+                        <p><strong>Senaste händelse:</strong> <span id="latest-date">-</span></p>
+                        <p><strong>Totalt antal händelser:</strong> <span id="total-events">0</span></p>
+                    </div>
+                </div>
+                
+                <div class="admin-section">
+                    <h3>Hämta historisk data</h3>
+                    <p>Hämta data för ett specifikt datumintervall</p>
+                    <div class="date-range-inputs">
+                        <label>
+                            <strong>Från datum:</strong>
+                            <input type="date" id="historical-start-date" class="date-input">
+                        </label>
+                        <label>
+                            <strong>Till datum:</strong>
+                            <input type="date" id="historical-end-date" class="date-input">
+                        </label>
+                    </div>
+                    <button id="fetch-historical" class="admin-btn">
+                        📅 Hämta historisk data
+                    </button>
+                    <div id="historical-status" class="export-status"></div>
+                </div>
+                
+                <div class="admin-section">
                     <h3>Säkerhetskopia</h3>
                     <p>Exportera all data till en CSV-fil</p>
                     <button id="export-csv" class="admin-btn">

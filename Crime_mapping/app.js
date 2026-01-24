@@ -19,6 +19,7 @@ let markers = [];
 let allEvents = [];
 let crimeTypeSortMode = 'frequency'; // 'frequency' or 'alphabetical'
 let regionSortMode = 'alphabetical'; // 'frequency' or 'alphabetical'
+let filterListenersSetup = false; // Track if filter listeners have been set up
 const filters = {
     dateFrom: null,
     dateTo: null,
@@ -184,38 +185,59 @@ function enrichEventsWithLocation(events) {
 // ===========================
 
 async function fetchCrimeData() {
+    console.log('[FETCH] Starting to fetch crime data from:', API_URL);
     try {
         updateStatus('Hämtar nya händelser...', 'loading');
         
+        console.log('[FETCH] Making API request...');
         const response = await fetch(API_URL);
+        console.log('[FETCH] Response received:', response.status, response.statusText);
+        
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         
+        console.log('[FETCH] Parsing JSON response...');
         const newEvents = await response.json();
+        console.log('[FETCH] Received', newEvents.length, 'events from API');
         const fetchTime = new Date();
         
         // Filter out unwanted events (Sammanfattning, Trafikkontroll, etc.)
+        console.log('[FETCH] Cleaning unwanted events...');
         const filteredNewEvents = cleanUnwantedEvents(newEvents);
+        console.log('[FETCH] After cleaning:', filteredNewEvents.length, 'events remaining');
         
         // Enrich events with Region, Municipality, and Locality
+        console.log('[FETCH] Enriching events with location data...');
         const enrichedEvents = enrichEventsWithLocation(filteredNewEvents);
+        console.log('[FETCH] Events enriched');
         
         // Deduplicate by ID
+        console.log('[FETCH] Deduplicating events. Current events:', allEvents.length);
         const existingIds = new Set(allEvents.map(e => e.id));
         const uniqueNewEvents = enrichedEvents.filter(event => !existingIds.has(event.id));
+        console.log('[FETCH] Unique new events:', uniqueNewEvents.length);
         
         if (uniqueNewEvents.length > 0) {
             allEvents = [...allEvents, ...uniqueNewEvents];
             saveToStorage(allEvents, fetchTime);
             updateStatus(`${uniqueNewEvents.length} nya händelser tillagda`, 'success');
             
-            // Re-apply filters and update map
-            applyFilters();
+            // Re-initialize filters to update UI with new data
+            initializeFilters();
         } else {
             // Update lastFetch timestamp even when no new events
             saveToStorage(allEvents, fetchTime);
-            updateStatus('Inga nya händelser', 'success');
+            if (allEvents.length === 0) {
+                updateStatus('Inga händelser hittades', 'success');
+            } else {
+                updateStatus('Inga nya händelser', 'success');
+            }
+        }
+        
+        // Update data range info if modal is open
+        if (document.getElementById('admin-modal').classList.contains('active')) {
+            updateDataRangeInfo();
         }
         
         // Hide status after 3 seconds
@@ -254,15 +276,28 @@ function startPeriodicFetch() {
 // ===========================
 
 function initMap() {
-    map = L.map('map').setView(SWEDEN_CENTER, SWEDEN_ZOOM);
+    console.log('[MAP] Initializing map...');
+    console.log('[MAP] SWEDEN_CENTER:', SWEDEN_CENTER);
+    console.log('[MAP] SWEDEN_ZOOM:', SWEDEN_ZOOM);
+    console.log('[MAP] Map container element:', document.getElementById('map'));
     
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors',
-        maxZoom: 18
-    }).addTo(map);
-    
-    // Initialize marker cluster group
-    markerClusterGroup = L.markerClusterGroup({
+    try {
+        const mapElement = document.getElementById('map');
+        if (!mapElement) {
+            throw new Error('Map container element not found!');
+        }
+        
+        map = L.map('map').setView(SWEDEN_CENTER, SWEDEN_ZOOM);
+        console.log('[MAP] Leaflet map created:', map);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 18
+        }).addTo(map);
+        console.log('[MAP] Tile layer added');
+        
+        // Initialize marker cluster group
+        markerClusterGroup = L.markerClusterGroup({
         maxClusterRadius: 80,
         spiderfyOnMaxZoom: true,
         showCoverageOnHover: false,
@@ -283,6 +318,14 @@ function initMap() {
         }
     });
     map.addLayer(markerClusterGroup);
+    console.log('[MAP] Marker cluster group added');
+    console.log('[MAP] Map initialization complete');
+    
+    } catch (error) {
+        console.error('[MAP] ERROR initializing map:', error);
+        console.error('[MAP] Error stack:', error.stack);
+        throw error;
+    }
 }
 
 function getMarkerColor(crimeType) {
@@ -325,30 +368,66 @@ function createPopupContent(event) {
 }
 
 function renderMarkers(events) {
-    // Clear existing markers from cluster group
-    markerClusterGroup.clearLayers();
-    markers = [];
+    console.log('[RENDER] Rendering markers for', events.length, 'events');
+    console.log('[RENDER] markerClusterGroup:', markerClusterGroup);
+    console.log('[RENDER] map:', map);
     
-    // Add new markers to cluster group
-    events.forEach(event => {
-        // Parse GPS coordinates
-        if (!event.location?.gps) return;
-        
-        const { lat, lng } = parseGPS(event.location.gps);
-        
-        if (!lat || !lng) return;
-        
-        const color = getMarkerColor(event.type);
-        const icon = createCustomIcon(color);
-        
-        const marker = L.marker([lat, lng], { icon })
-            .bindPopup(createPopupContent(event));
-        
-        markerClusterGroup.addLayer(marker);
-        markers.push(marker);
-    });
+    if (!markerClusterGroup) {
+        console.error('[RENDER] ERROR: markerClusterGroup is null!');
+        return;
+    }
     
-    updateEventCount(events.length);
+    if (!map) {
+        console.error('[RENDER] ERROR: map is null!');
+        return;
+    }
+    
+    try {
+        // Clear existing markers from cluster group
+        markerClusterGroup.clearLayers();
+        markers = [];
+        console.log('[RENDER] Cleared existing markers');
+        
+        let markersCreated = 0;
+        let markersSkipped = 0;
+        
+        // Add new markers to cluster group
+        events.forEach(event => {
+            // Parse GPS coordinates
+            if (!event.location?.gps) {
+                markersSkipped++;
+                return;
+            }
+            
+            const { lat, lng } = parseGPS(event.location.gps);
+            
+            if (!lat || !lng) {
+                markersSkipped++;
+                return;
+            }
+            
+            const color = getMarkerColor(event.type);
+            const icon = createCustomIcon(color);
+            
+            const marker = L.marker([lat, lng], { icon })
+                .bindPopup(createPopupContent(event));
+            
+            markerClusterGroup.addLayer(marker);
+            markers.push(marker);
+            markersCreated++;
+        });
+        
+        console.log('[RENDER] Markers created:', markersCreated);
+        console.log('[RENDER] Markers skipped (no GPS):', markersSkipped);
+        console.log('[RENDER] Total markers in cluster:', markers.length);
+        
+        updateEventCount(events.length);
+        console.log('[RENDER] Marker rendering complete');
+        
+    } catch (error) {
+        console.error('[RENDER] ERROR rendering markers:', error);
+        console.error('[RENDER] Error stack:', error.stack);
+    }
 }
 
 function zoomToRegion(regionName) {
@@ -385,23 +464,52 @@ function zoomToRegion(regionName) {
 // ===========================
 
 function initializeFilters() {
-    // Populate crime type filters
-    const crimeTypes = getCrimeTypesWithCounts();
-    populateCrimeTypeFilters(crimeTypes);
+    console.log('[FILTERS] Initializing filters...');
+    console.log('[FILTERS] Current events count:', allEvents.length);
     
-    // Populate region filter
-    const regions = getUniqueRegions(regionSortMode);
-    populateRegionFilter(regions);
-    
-    // Set up event listeners
-    setupFilterListeners();
-    
-    // Initialize "To" date input with today's date
-    const today = new Date();
-    document.getElementById('date-to').value = formatDateForInput(today);
-    
-    // Initialize with all events
-    renderMarkers(allEvents);
+    try {
+        // Set up event listeners first (only once)
+        if (!filterListenersSetup) {
+            console.log('[FILTERS] Setting up event listeners...');
+            setupFilterListeners();
+            filterListenersSetup = true;
+            console.log('[FILTERS] Event listeners set up');
+        } else {
+            console.log('[FILTERS] Event listeners already set up, skipping...');
+        }
+        
+        // Initialize "To" date input with today's date
+        const today = new Date();
+        const dateToInput = document.getElementById('date-to');
+        if (dateToInput) {
+            dateToInput.value = formatDateForInput(today);
+            console.log('[FILTERS] Date input initialized:', dateToInput.value);
+        } else {
+            console.error('[FILTERS] Date-to input element not found!');
+        }
+        
+        // Populate crime type filters
+        console.log('[FILTERS] Getting crime types with counts...');
+        const crimeTypes = getCrimeTypesWithCounts();
+        console.log('[FILTERS] Crime types found:', crimeTypes.length);
+        populateCrimeTypeFilters(crimeTypes);
+        
+        // Populate region filter
+        console.log('[FILTERS] Getting unique regions...');
+        const regions = getUniqueRegions(regionSortMode);
+        console.log('[FILTERS] Regions found:', regions.length);
+        populateRegionFilter(regions);
+        
+        // Initialize with all events (or empty array if no data)
+        console.log('[FILTERS] Rendering markers for', allEvents.length, 'events...');
+        renderMarkers(allEvents);
+        console.log('[FILTERS] Filters initialization complete');
+        
+    } catch (error) {
+        console.error('[FILTERS] ERROR initializing filters:', error);
+        console.error('[FILTERS] Error stack:', error.stack);
+        throw error;
+    }
 }
 
 function getCrimeTypesWithCounts(regionFilter = '') {
@@ -790,6 +898,150 @@ function formatDateTime(dateTimeString) {
 // Admin Functions
 // ===========================
 
+async function fetchHistoricalData() {
+    const statusEl = document.getElementById('historical-status');
+    const startDateInput = document.getElementById('historical-start-date');
+    const endDateInput = document.getElementById('historical-end-date');
+    
+    try {
+        // Validate inputs
+        const startDate = startDateInput.value;
+        const endDate = endDateInput.value;
+        
+        if (!startDate || !endDate) {
+            statusEl.textContent = '✗ Vänligen välj både start- och slutdatum';
+            statusEl.className = 'export-status error';
+            statusEl.style.display = 'block';
+            return;
+        }
+        
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        
+        if (start > end) {
+            statusEl.textContent = '✗ Startdatum måste vara före slutdatum';
+            statusEl.className = 'export-status error';
+            statusEl.style.display = 'block';
+            return;
+        }
+        
+        // Calculate number of days
+        const daysDiff = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+        
+        if (daysDiff > 365) {
+            statusEl.textContent = '✗ Maximalt 365 dagar kan hämtas åt gången';
+            statusEl.className = 'export-status error';
+            statusEl.style.display = 'block';
+            return;
+        }
+        
+        // Disable button during fetch
+        const fetchBtn = document.getElementById('fetch-historical');
+        fetchBtn.disabled = true;
+        fetchBtn.textContent = '⏳ Hämtar...';
+        
+        statusEl.textContent = `Hämtar data för ${daysDiff} dagar...`;
+        statusEl.className = 'export-status';
+        statusEl.style.display = 'block';
+        
+        const existingIds = new Set(allEvents.map(e => e.id));
+        const allNewEvents = [];
+        let daysProcessed = 0;
+        
+        // Loop through each day
+        const currentDate = new Date(start);
+        currentDate.setHours(0, 0, 0, 0);
+        const endDateObj = new Date(end);
+        endDateObj.setHours(0, 0, 0, 0);
+        
+        while (currentDate <= endDateObj) {
+            // Format date as YYYY-MM-DD
+            const dateStr = currentDate.toISOString().split('T')[0];
+            const apiUrl = `${API_URL}?DateTime=${dateStr}`;
+            
+            try {
+                const response = await fetch(apiUrl);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const dayEvents = await response.json();
+                
+                // Filter out unwanted events
+                const cleanedEvents = cleanUnwantedEvents(dayEvents);
+                
+                // Enrich events
+                const enrichedEvents = enrichEventsWithLocation(cleanedEvents);
+                
+                // Deduplicate against existing events
+                const newEvents = enrichedEvents.filter(event => !existingIds.has(event.id));
+                
+                // Add new events to collection and track their IDs
+                newEvents.forEach(event => {
+                    existingIds.add(event.id);
+                    allNewEvents.push(event);
+                });
+                
+                daysProcessed++;
+                
+                // Update status every 10 days or on last day
+                if (daysProcessed % 10 === 0 || daysProcessed === daysDiff) {
+                    statusEl.textContent = `Hämtar... ${daysProcessed}/${daysDiff} dagar (${allNewEvents.length} nya händelser)`;
+                }
+                
+            } catch (error) {
+                console.error(`Error fetching data for ${dateStr}:`, error);
+                daysProcessed++;
+                // Continue with next day even if one fails
+            }
+            
+            // Move to next day
+            currentDate.setDate(currentDate.getDate() + 1);
+            
+            // Small delay to avoid overwhelming the API
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
+        // Add all new events to storage
+        if (allNewEvents.length > 0) {
+            allEvents = [...allEvents, ...allNewEvents];
+            saveToStorage(allEvents, new Date());
+            
+            // Re-apply filters and update map
+            applyFilters();
+        }
+        
+        // Update data range info if modal is open
+        if (document.getElementById('admin-modal').classList.contains('active')) {
+            updateDataRangeInfo();
+        }
+        
+        // Show success message
+        statusEl.textContent = `✓ Klart! Hämtade ${allNewEvents.length} nya händelser från ${daysDiff} dagar`;
+        statusEl.className = 'export-status success';
+        
+        // Re-enable button
+        fetchBtn.disabled = false;
+        fetchBtn.textContent = '📅 Hämta historisk data';
+        
+        // Hide success message after 8 seconds
+        setTimeout(() => {
+            statusEl.style.display = 'none';
+        }, 8000);
+        
+    } catch (error) {
+        console.error('Error fetching historical data:', error);
+        const statusEl = document.getElementById('historical-status');
+        statusEl.textContent = '✗ Fel vid hämtning: ' + error.message;
+        statusEl.className = 'export-status error';
+        
+        // Re-enable button
+        const fetchBtn = document.getElementById('fetch-historical');
+        fetchBtn.disabled = false;
+        fetchBtn.textContent = '📅 Hämta historisk data';
+    }
+}
+
 async function cleanAndRefetch() {
     try {
         const statusEl = document.getElementById('clean-status');
@@ -826,6 +1078,11 @@ async function cleanAndRefetch() {
         // Re-initialize filters and update map
         initializeFilters();
         
+        // Update data range info if modal is open
+        if (document.getElementById('admin-modal').classList.contains('active')) {
+            updateDataRangeInfo();
+        }
+        
         // Show success message
         statusEl.textContent = `✓ Klart! Hämtade ${allEvents.length} händelser från servern`;
         statusEl.className = 'export-status success';
@@ -843,6 +1100,56 @@ async function cleanAndRefetch() {
     }
 }
 
+function updateDataRangeInfo() {
+    const earliestDateEl = document.getElementById('earliest-date');
+    const latestDateEl = document.getElementById('latest-date');
+    const totalEventsEl = document.getElementById('total-events');
+    
+    if (!allEvents || allEvents.length === 0) {
+        earliestDateEl.textContent = 'Ingen data';
+        latestDateEl.textContent = 'Ingen data';
+        totalEventsEl.textContent = '0';
+        return;
+    }
+    
+    // Find earliest and latest datetime
+    let earliest = null;
+    let latest = null;
+    
+    allEvents.forEach(event => {
+        if (event.datetime) {
+            // Parse datetime string (format: "YYYY-MM-DD HH:MM")
+            const dateStr = event.datetime;
+            const date = new Date(dateStr.replace(' ', 'T'));
+            
+            if (!isNaN(date.getTime())) {
+                if (!earliest || date < earliest) {
+                    earliest = date;
+                }
+                if (!latest || date > latest) {
+                    latest = date;
+                }
+            }
+        }
+    });
+    
+    // Format dates for display (Swedish format)
+    const formatDate = (date) => {
+        if (!date) return 'Ingen data';
+        return date.toLocaleString('sv-SE', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    };
+    
+    earliestDateEl.textContent = formatDate(earliest);
+    latestDateEl.textContent = formatDate(latest);
+    totalEventsEl.textContent = allEvents.length.toLocaleString('sv-SE');
+}
+
 function setupAdminModal() {
     const settingsBtn = document.getElementById('settings-btn');
     const modal = document.getElementById('admin-modal');
@@ -852,6 +1159,7 @@ function setupAdminModal() {
     
     // Open modal
     settingsBtn.addEventListener('click', () => {
+        updateDataRangeInfo(); // Update data range info when opening modal
         modal.classList.add('active');
     });
     
@@ -879,6 +1187,10 @@ function setupAdminModal() {
     
     // Clean and refetch
     cleanBtn.addEventListener('click', cleanAndRefetch);
+    
+    // Fetch historical data
+    const fetchHistoricalBtn = document.getElementById('fetch-historical');
+    fetchHistoricalBtn.addEventListener('click', fetchHistoricalData);
 }
 
 function exportToCSV() {
@@ -977,46 +1289,93 @@ function escapeCSV(value) {
 // ===========================
 
 async function init() {
-    // Initialize map
-    initMap();
+    console.log('[INIT] Starting initialization...');
     
-    // Set up admin modal
-    setupAdminModal();
-    
-    // Load data from storage
-    const stored = loadFromStorage();
-    
-    // Enrich stored events with Region, Municipality, and Locality if not already present
-    if (stored.events.length > 0 && !stored.events[0].Region) {
-        allEvents = enrichEventsWithLocation(stored.events);
-        // Save enriched data back to storage
-        saveToStorage(allEvents, stored.lastFetch || new Date());
-    } else {
-        allEvents = stored.events;
-    }
-    
-    if (allEvents.length > 0) {
-        // Initialize filters with stored data
+    try {
+        // Initialize map
+        console.log('[INIT] Initializing map...');
+        initMap();
+        console.log('[INIT] Map initialized:', map !== null);
+        
+        // Set up admin modal
+        console.log('[INIT] Setting up admin modal...');
+        setupAdminModal();
+        console.log('[INIT] Admin modal setup complete');
+        
+        // Load data from storage
+        console.log('[INIT] Loading data from storage...');
+        const stored = loadFromStorage();
+        console.log('[INIT] Loaded from storage:', {
+            eventCount: stored.events.length,
+            lastFetch: stored.lastFetch
+        });
+        
+        // Enrich stored events with Region, Municipality, and Locality if not already present
+        if (stored.events.length > 0 && !stored.events[0].Region) {
+            console.log('[INIT] Enriching events with location data...');
+            allEvents = enrichEventsWithLocation(stored.events);
+            // Save enriched data back to storage
+            saveToStorage(allEvents, stored.lastFetch || new Date());
+            console.log('[INIT] Events enriched:', allEvents.length);
+        } else {
+            allEvents = stored.events;
+            console.log('[INIT] Using stored events as-is:', allEvents.length);
+        }
+        
+        // Always initialize filters (even if no data, to set up UI)
+        console.log('[INIT] Initializing filters...');
         initializeFilters();
+        console.log('[INIT] Filters initialized');
+        
+        // Fetch new data if needed
+        const shouldFetchData = shouldFetch(stored.lastFetch);
+        console.log('[INIT] Should fetch new data?', shouldFetchData);
+        
+        if (shouldFetchData) {
+            console.log('[INIT] Fetching new data from API...');
+            await fetchCrimeData();
+            console.log('[INIT] Data fetch complete. Total events:', allEvents.length);
+        } else {
+            if (allEvents.length > 0) {
+                updateStatus('Data laddad från cache', 'success');
+                console.log('[INIT] Using cached data:', allEvents.length, 'events');
+            } else {
+                updateStatus('Ingen data - hämtar från servern...', 'loading');
+                console.log('[INIT] No cached data, fetching from server...');
+                await fetchCrimeData();
+            }
+            setTimeout(() => {
+                document.getElementById('status-indicator').style.display = 'none';
+            }, 2000);
+        }
+        
+        // Start periodic fetching
+        console.log('[INIT] Starting periodic fetch...');
+        startPeriodicFetch();
+        console.log('[INIT] Initialization complete!');
+        
+    } catch (error) {
+        console.error('[INIT] ERROR during initialization:', error);
+        console.error('[INIT] Error stack:', error.stack);
+        updateStatus('Fel vid initialisering: ' + error.message, 'error');
     }
-    
-    // Fetch new data if needed (filters already initialized above if data exists)
-    if (shouldFetch(stored.lastFetch)) {
-        await fetchCrimeData();
-    } else {
-        updateStatus('Data laddad från cache', 'success');
-        setTimeout(() => {
-            document.getElementById('status-indicator').style.display = 'none';
-        }, 2000);
-    }
-    
-    // Start periodic fetching
-    startPeriodicFetch();
 }
 
 // Start the application when DOM is ready
+console.log('[APP] Script loaded. Document ready state:', document.readyState);
+console.log('[APP] Checking for required elements...');
+console.log('[APP] Map element:', document.getElementById('map') ? 'Found' : 'NOT FOUND');
+console.log('[APP] Filter panel:', document.getElementById('filter-panel') ? 'Found' : 'NOT FOUND');
+console.log('[APP] SWEDEN_CENTER defined?', typeof SWEDEN_CENTER !== 'undefined');
+console.log('[APP] SWEDEN_ZOOM defined?', typeof SWEDEN_ZOOM !== 'undefined');
+
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+    console.log('[APP] Document still loading, waiting for DOMContentLoaded...');
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log('[APP] DOMContentLoaded fired, calling init()...');
+        init();
+    });
 } else {
+    console.log('[APP] Document already ready, calling init() immediately...');
     init();
 }
