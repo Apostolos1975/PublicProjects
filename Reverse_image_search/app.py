@@ -6,17 +6,42 @@ import os
 from io import BytesIO
 import json
 
+# Try to load .env file if python-dotenv is available
+try:
+    from dotenv import load_dotenv
+    # Load .env file from the current directory
+    env_loaded = load_dotenv()
+    if env_loaded:
+        print("✓ .env file loaded successfully")
+    else:
+        print("⚠ .env file not found or couldn't be loaded")
+except ImportError:
+    print("⚠ python-dotenv not installed. Install it with: pip install python-dotenv")
+    print("  Environment variables must be set manually.")
+
 app = Flask(__name__, static_folder='static')
 CORS(app)
 
-# API Configuration - These should be set as environment variables
+# API Configuration - These should be set as environment variables or in .env file
 API_CONFIG = {
-    'google_api_key': os.getenv('GOOGLE_API_KEY', ''),
-    'google_cx': os.getenv('GOOGLE_CX', ''),
-    'bing_api_key': os.getenv('BING_API_KEY', ''),
-    'tineye_api_key': os.getenv('TINEYE_API_KEY', ''),
-    'tineye_secret': os.getenv('TINEYE_SECRET', ''),
+    'google_api_key': os.getenv('GOOGLE_API_KEY', '').strip(),
+    'google_cx': os.getenv('GOOGLE_CX', '').strip(),
+    'bing_api_key': os.getenv('BING_API_KEY', '').strip(),
+    'tineye_api_key': os.getenv('TINEYE_API_KEY', '').strip(),
+    'tineye_secret': os.getenv('TINEYE_SECRET', '').strip(),
+    'yandex_api_key': os.getenv('YANDEX_API_KEY', '').strip(),
+    'yandex_folder_id': os.getenv('YANDEX_FOLDER_ID', '').strip(),
 }
+
+# Debug: Print configuration status (without showing actual keys)
+print("\nAPI Configuration Status:")
+print(f"  Google API Key: {'✓ Configured' if API_CONFIG['google_api_key'] else '✗ Not configured'}")
+print(f"  Google CX: {'✓ Configured' if API_CONFIG['google_cx'] else '✗ Not configured'}")
+print(f"  Bing API Key: {'✓ Configured' if API_CONFIG['bing_api_key'] else '✗ Not configured'}")
+print(f"  TinEye API Key: {'✓ Configured' if API_CONFIG['tineye_api_key'] else '✗ Not configured'}")
+print(f"  Yandex API Key: {'✓ Configured' if API_CONFIG['yandex_api_key'] else '✗ Not configured'}")
+print(f"  Yandex Folder ID: {'✓ Configured' if API_CONFIG['yandex_folder_id'] else '✗ Not configured'}")
+print()
 
 class ReverseImageSearch:
     """Base class for reverse image search implementations"""
@@ -59,9 +84,27 @@ class ReverseImageSearch:
                     'total_results': data.get('searchInformation', {}).get('totalResults', '0'),
                     'note': 'Google Custom Search API requires additional setup for true reverse image search'
                 }
-            return {'success': False, 'error': f'API returned status {response.status_code}'}
+            else:
+                # Try to get detailed error message from Google's API response
+                try:
+                    error_data = response.json()
+                    error_message = error_data.get('error', {}).get('message', 'Unknown error')
+                    error_code = error_data.get('error', {}).get('code', response.status_code)
+                    return {
+                        'success': False, 
+                        'error': f'Google API Error ({error_code}): {error_message}',
+                        'details': error_data.get('error', {})
+                    }
+                except:
+                    # If JSON parsing fails, return the raw response
+                    error_text = response.text[:500] if response.text else 'Unknown error'
+                    return {
+                        'success': False, 
+                        'error': f'API returned status {response.status_code}',
+                        'details': error_text
+                    }
         except Exception as e:
-            return {'success': False, 'error': str(e)}
+            return {'success': False, 'error': f'Request failed: {str(e)}'}
     
     @staticmethod
     def bing_visual_search(image_data, api_key):
@@ -154,18 +197,82 @@ class ReverseImageSearch:
             return {'success': False, 'error': str(e)}
     
     @staticmethod
-    def yandex_search(image_url):
-        """Yandex Reverse Image Search (web scraping approach)"""
+    def yandex_search(image_data, api_key, folder_id):
+        """Yandex Reverse Image Search using Yandex Cloud Search API
+        
+        Documentation: https://yandex.cloud/en/docs/search-api/concepts/pic-search
+        """
         try:
-            # Yandex doesn't have a public API, so this would require web scraping
-            # For now, return a placeholder
-            return {
-                'success': False,
-                'error': 'Yandex API requires web scraping implementation',
-                'note': 'Yandex reverse image search is available at https://yandex.com/images/'
+            endpoint = "https://searchapi.api.cloud.yandex.net/v2/image/search_by_image"
+            
+            headers = {
+                'Authorization': f'Api-Key {api_key}',
+                'Content-Type': 'application/json'
             }
+            
+            # Encode image to base64 for JSON transmission
+            image_base64 = base64.b64encode(image_data).decode('utf-8')
+            
+            # Prepare request body
+            payload = {
+                'folderId': folder_id,
+                'image': image_base64
+            }
+            
+            response = requests.post(endpoint, headers=headers, json=payload, timeout=15)
+            
+            if response.status_code == 200:
+                data = response.json()
+                # Extract results from Yandex API response
+                # The structure may vary, so we'll handle different possible formats
+                results = []
+                total_results = 0
+                
+                # Try to extract results from various possible response structures
+                if 'results' in data:
+                    results = data.get('results', [])
+                    total_results = len(results)
+                elif 'items' in data:
+                    results = data.get('items', [])
+                    total_results = len(results)
+                elif 'images' in data:
+                    results = data.get('images', [])
+                    total_results = len(results)
+                else:
+                    # If structure is unknown, return the full response for debugging
+                    results = [data] if data else []
+                    total_results = 1 if data else 0
+                
+                return {
+                    'success': True,
+                    'results': results[:10],  # Limit to 10 results
+                    'total_results': total_results,
+                    'raw_response': data  # Include full response for reference
+                }
+            elif response.status_code == 401:
+                return {'success': False, 'error': 'Invalid API key or unauthorized'}
+            elif response.status_code == 403:
+                return {'success': False, 'error': 'Access forbidden. Check folder ID and API key permissions.'}
+            elif response.status_code == 400:
+                try:
+                    error_data = response.json()
+                    error_message = error_data.get('message', 'Bad request')
+                    return {'success': False, 'error': f'Bad request: {error_message}'}
+                except:
+                    return {'success': False, 'error': 'Bad request - check image format and size'}
+            else:
+                error_text = response.text[:500] if response.text else 'Unknown error'
+                return {
+                    'success': False, 
+                    'error': f'API returned status {response.status_code}',
+                    'details': error_text
+                }
+        except requests.exceptions.Timeout:
+            return {'success': False, 'error': 'Request timeout - Yandex API did not respond in time'}
+        except requests.exceptions.RequestException as e:
+            return {'success': False, 'error': f'Network error: {str(e)}'}
         except Exception as e:
-            return {'success': False, 'error': str(e)}
+            return {'success': False, 'error': f'Unexpected error: {str(e)}'}
 
 @app.route('/')
 def index():
@@ -189,7 +296,7 @@ def compare_apis():
         
         results = {}
         
-        # Google Search
+        # Google Search (Note: Custom Search API doesn't support true reverse image search)
         if API_CONFIG['google_api_key'] and API_CONFIG['google_cx']:
             results['google'] = ReverseImageSearch.google_search(
                 image_bytes,
@@ -197,7 +304,11 @@ def compare_apis():
                 API_CONFIG['google_cx']
             )
         else:
-            results['google'] = {'success': False, 'error': 'API key not configured'}
+            results['google'] = {
+                'success': False, 
+                'error': 'API key or Custom Search Engine ID (CX) not configured',
+                'note': 'Google Custom Search API requires both API key and CX. Note: This API does not support true reverse image search - it only searches by text queries.'
+            }
         
         # Bing Visual Search
         if API_CONFIG['bing_api_key']:
@@ -218,8 +329,19 @@ def compare_apis():
         else:
             results['tineye'] = {'success': False, 'error': 'API key not configured'}
         
-        # Yandex (placeholder)
-        results['yandex'] = ReverseImageSearch.yandex_search(None)
+        # Yandex Search
+        if API_CONFIG['yandex_api_key'] and API_CONFIG['yandex_folder_id']:
+            results['yandex'] = ReverseImageSearch.yandex_search(
+                image_bytes,
+                API_CONFIG['yandex_api_key'],
+                API_CONFIG['yandex_folder_id']
+            )
+        else:
+            results['yandex'] = {
+                'success': False, 
+                'error': 'API key or Folder ID not configured',
+                'note': 'Yandex Cloud Search API requires both API key and Folder ID. Get them from https://cloud.yandex.com/'
+            }
         
         return jsonify(results)
     
@@ -231,10 +353,11 @@ def get_services():
     """Get information about available services"""
     services = {
         'google': {
-            'name': 'Google Reverse Image Search',
+            'name': 'Google Custom Search (Limited)',
             'api_docs': 'https://developers.google.com/custom-search/v1/overview',
             'configured': bool(API_CONFIG['google_api_key'] and API_CONFIG['google_cx']),
-            'features': ['Web results', 'Image similarity', 'Source detection']
+            'features': ['Text-based image search only', 'Requires Custom Search Engine (CX)', 'Does not support true reverse image search'],
+            'note': 'Google does not provide a public reverse image search API. Custom Search API only searches by text queries, not by image upload.'
         },
         'bing': {
             'name': 'Bing Visual Search',
@@ -249,10 +372,10 @@ def get_services():
             'features': ['Exact matches', 'Modified image detection', 'Usage tracking']
         },
         'yandex': {
-            'name': 'Yandex Images',
-            'api_docs': 'https://yandex.com/images/',
-            'configured': False,
-            'features': ['Web scraping required', 'No official API']
+            'name': 'Yandex Cloud Search API',
+            'api_docs': 'https://yandex.cloud/en/docs/search-api/concepts/pic-search',
+            'configured': bool(API_CONFIG['yandex_api_key'] and API_CONFIG['yandex_folder_id']),
+            'features': ['True reverse image search', 'Cloud-based API', 'Requires Yandex Cloud account']
         }
     }
     return jsonify(services)

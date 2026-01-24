@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brottskartan Sverige - Polisens Händelser</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+          crossorigin=""/>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Filter Panel -->
+    <div id="filter-panel" class="filter-panel">
+        <div class="filter-header">
+            <h2>Filter</h2>
+            <button id="toggle-filters" class="toggle-btn" aria-label="Toggle filters">◀</button>
+        </div>
+        
+        <div class="filter-content">
+            <!-- Event Count -->
+            <div class="filter-section">
+                <div class="event-count">
+                    Visar <span id="event-count">0</span> händelser
+                </div>
+            </div>
+            
+            <!-- Date Filter -->
+            <div class="filter-section">
+                <h3>Datum</h3>
+                <div class="date-inputs">
+                    <label>
+                        Från:
+                        <input type="date" id="date-from" class="date-input">
+                    </label>
+                    <label>
+                        Till:
+                        <input type="date" id="date-to" class="date-input">
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Region Filter -->
+            <div class="filter-section">
+                <div class="filter-header-row">
+                    <h3>Län</h3>
+                    <div class="sort-controls">
+                        <button id="sort-region-alpha" class="sort-btn active" title="Sortera alfabetiskt">A-Ö</button>
+                        <button id="sort-region-freq" class="sort-btn" title="Sortera efter frekvens">Freq</button>
+                    </div>
+                </div>
+                <select id="region-filter" class="region-select">
+                    <option value="">Alla län</option>
+                </select>
+            </div>
+            
+            <!-- Crime Type Filter -->
+            <div class="filter-section">
+                <div class="filter-header-row">
+                    <h3>Brottstyp</h3>
+                    <div class="sort-controls">
+                        <button id="sort-alpha" class="sort-btn" title="Sortera alfabetiskt">A-Ö</button>
+                        <button id="sort-freq" class="sort-btn active" title="Sortera efter frekvens">Freq</button>
+                    </div>
+                </div>
+                <div class="filter-header-row" style="margin-bottom: 8px;">
+                    <div class="select-controls">
+                        <button id="select-all" class="select-btn" title="Välj alla">Alla</button>
+                        <button id="select-none" class="select-btn" title="Avmarkera alla">Inga</button>
+                    </div>
+                </div>
+                <div id="crime-type-filters" class="crime-type-list">
+                    <!-- Crime type checkboxes will be populated dynamically -->
+                </div>
+            </div>
+            
+            <!-- Clear Filters Button -->
+            <div class="filter-section">
+                <button id="clear-filters" class="btn-clear">Rensa filter</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Map Container -->
+    <div id="map"></div>
+    
+    <!-- Status Indicator -->
+    <div id="status-indicator" class="status-indicator">
+        <span id="status-text">Laddar data...</span>
+    </div>
+    
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+            crossorigin=""></script>
+    
+    <!-- Custom JS -->
+    <script src="app.js"></script>
+</body>
+</html>

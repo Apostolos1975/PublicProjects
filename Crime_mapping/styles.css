@@ -1,0 +1,482 @@
+/* Reset and Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+}
+
+/* Map Container */
+#map {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1;
+}
+
+/* Filter Panel */
+.filter-panel {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    width: 320px;
+    max-height: calc(100vh - 40px);
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.3s ease;
+}
+
+.filter-panel.collapsed {
+    transform: translateX(-290px);
+}
+
+.filter-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    background: #2c3e50;
+    color: white;
+    border-radius: 8px 8px 0 0;
+}
+
+.filter-header h2 {
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.toggle-btn {
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 5px 10px;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.toggle-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.filter-panel.collapsed .toggle-btn {
+    transform: rotate(180deg);
+}
+
+.filter-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+/* Filter Sections */
+.filter-section {
+    margin-bottom: 24px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.filter-section:last-child {
+    border-bottom: none;
+}
+
+.filter-section h3 {
+    font-size: 14px;
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Sorting Controls */
+.filter-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.sort-controls {
+    display: flex;
+    gap: 4px;
+}
+
+.sort-btn {
+    padding: 4px 8px;
+    font-size: 11px;
+    border: 1px solid #ddd;
+    background: white;
+    color: #666;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: all 0.2s;
+}
+
+.sort-btn:hover {
+    background: #f0f0f0;
+}
+
+.sort-btn.active {
+    background: #3498db;
+    color: white;
+    border-color: #3498db;
+}
+
+/* Select All/None Controls */
+.select-controls {
+    display: flex;
+    gap: 4px;
+}
+
+.select-btn {
+    padding: 4px 12px;
+    font-size: 12px;
+    border: 1px solid #ddd;
+    background: white;
+    color: #666;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: all 0.2s;
+}
+
+.select-btn:hover {
+    background: #f0f0f0;
+    border-color: #3498db;
+    color: #3498db;
+}
+
+/* Event Count */
+.event-count {
+    background: #e8f4f8;
+    padding: 12px;
+    border-radius: 6px;
+    text-align: center;
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 16px;
+}
+
+.event-count span {
+    color: #3498db;
+    font-size: 20px;
+}
+
+/* Date Inputs */
+.date-inputs {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.date-inputs label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 13px;
+    color: #555;
+}
+
+.date-input {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: border-color 0.2s;
+    font-family: inherit;
+    color: #333;
+}
+
+.date-input:focus {
+    outline: none;
+    border-color: #3498db;
+}
+
+/* Ensure date input shows properly */
+.date-input::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+}
+
+.date-input::-webkit-datetime-edit {
+    padding: 0;
+}
+
+.date-input::-webkit-datetime-edit-fields-wrapper {
+    padding: 0;
+}
+
+.date-input::-webkit-datetime-edit-text {
+    padding: 0 0.3em;
+}
+
+.date-input::-webkit-datetime-edit-month-field,
+.date-input::-webkit-datetime-edit-day-field,
+.date-input::-webkit-datetime-edit-year-field {
+    padding: 0;
+}
+
+/* Region Select */
+.region-select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    background: white;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.region-select:focus {
+    outline: none;
+    border-color: #3498db;
+}
+
+/* Crime Type List */
+.crime-type-list {
+    max-height: 300px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.crime-type-item {
+    display: flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: background 0.2s;
+    cursor: pointer;
+}
+
+.crime-type-item:hover {
+    background: #f5f5f5;
+}
+
+.crime-type-item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    margin-right: 10px;
+}
+
+.crime-type-label {
+    flex: 1;
+    font-size: 13px;
+    color: #333;
+    cursor: pointer;
+}
+
+.crime-type-count {
+    font-size: 12px;
+    color: #999;
+    background: #f0f0f0;
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+/* Clear Button */
+.btn-clear {
+    width: 100%;
+    padding: 12px;
+    background: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-clear:hover {
+    background: #c0392b;
+}
+
+/* Status Indicator */
+.status-indicator {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    background: white;
+    padding: 12px 20px;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    font-size: 14px;
+    color: #555;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.status-indicator.loading::before {
+    content: '';
+    width: 16px;
+    height: 16px;
+    border: 2px solid #3498db;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+.status-indicator.success {
+    background: #2ecc71;
+    color: white;
+}
+
+.status-indicator.error {
+    background: #e74c3c;
+    color: white;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Custom Leaflet Popup Styles */
+.leaflet-popup-content-wrapper {
+    border-radius: 8px;
+    padding: 0;
+}
+
+.leaflet-popup-content {
+    margin: 0;
+    min-width: 250px;
+}
+
+.crime-popup {
+    padding: 16px;
+}
+
+.crime-popup-header {
+    font-weight: 600;
+    font-size: 15px;
+    color: #2c3e50;
+    margin-bottom: 8px;
+    line-height: 1.4;
+}
+
+.crime-popup-type {
+    display: inline-block;
+    background: #e74c3c;
+    color: white;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.crime-popup-summary {
+    font-size: 13px;
+    color: #555;
+    line-height: 1.5;
+    margin-bottom: 10px;
+}
+
+.crime-popup-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 12px;
+    color: #777;
+    padding-top: 10px;
+    border-top: 1px solid #eee;
+}
+
+.crime-popup-meta span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Custom Marker Colors */
+.leaflet-marker-icon {
+    filter: hue-rotate(0deg);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .filter-panel {
+        width: 280px;
+        top: 10px;
+        left: 10px;
+        max-height: calc(100vh - 20px);
+    }
+    
+    .filter-panel.collapsed {
+        transform: translateX(-250px);
+    }
+    
+    .filter-header {
+        padding: 15px;
+    }
+    
+    .filter-header h2 {
+        font-size: 18px;
+    }
+    
+    .filter-content {
+        padding: 15px;
+    }
+    
+    .status-indicator {
+        bottom: 10px;
+        right: 10px;
+        font-size: 12px;
+        padding: 8px 16px;
+    }
+}
+
+@media (max-width: 480px) {
+    .filter-panel {
+        width: calc(100vw - 20px);
+        left: 10px;
+        right: 10px;
+    }
+    
+    .filter-panel.collapsed {
+        transform: translateX(calc(-100vw + 60px));
+    }
+}
+
+/* Scrollbar Styles */
+.filter-content::-webkit-scrollbar,
+.crime-type-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.filter-content::-webkit-scrollbar-track,
+.crime-type-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.filter-content::-webkit-scrollbar-thumb,
+.crime-type-list::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 3px;
+}
+
+.filter-content::-webkit-scrollbar-thumb:hover,
+.crime-type-list::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}

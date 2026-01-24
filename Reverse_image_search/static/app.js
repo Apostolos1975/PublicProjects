@@ -238,9 +238,19 @@ function displayResults(results) {
                 </div>
             `;
         } else {
+            let errorContent = result.error || 'Unknown error occurred';
+            if (result.details) {
+                // Show additional error details if available
+                if (typeof result.details === 'string') {
+                    errorContent += `<br><small style="color: #999; margin-top: 8px; display: block;">${result.details.substring(0, 200)}</small>`;
+                } else if (typeof result.details === 'object') {
+                    const detailsStr = JSON.stringify(result.details, null, 2).substring(0, 300);
+                    errorContent += `<br><small style="color: #999; margin-top: 8px; display: block; font-family: monospace; font-size: 0.8rem;">${detailsStr}</small>`;
+                }
+            }
             content += `
                 <div class="error-message">
-                    ${result.error || 'Unknown error occurred'}
+                    ${errorContent}
                 </div>
             `;
         }
