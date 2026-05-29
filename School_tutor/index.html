@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="sv">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#135d7b" />
+    <link rel="icon" href="images/favicon.svg" type="image/svg+xml" />
+    <title>Matteövningar — grundskolan</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;1,9..40,400&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="top-bar">
+      <div class="top-bar-main">
+        <div class="controls-grid" aria-label="Inställningar för uppgifter">
+          <div class="field">
+            <label for="level">Nivå</label>
+            <select id="level" name="level">
+              <option value="f-3">Årskurs F–3</option>
+              <option value="4-6" selected>Årskurs 4–6</option>
+              <option value="7-9">Årskurs 7–9</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="difficulty">Svårighet</label>
+            <select id="difficulty" name="difficulty">
+              <option value="easy">Lätt</option>
+              <option value="medium" selected>Medel</option>
+              <option value="hard">Svår</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="provider">Leverantör</label>
+            <select id="provider" name="provider">
+              <option value="openai">OpenAI</option>
+              <option value="grok">Grok (xAI)</option>
+              <option value="claude">Claude</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="model">Modell</label>
+            <select id="model" name="model"></select>
+          </div>
+          <div class="field">
+            <label for="category">Kategori</label>
+            <select id="category" name="category">
+              <option value="hela-tal-prioriteringsregler" selected>hela tal och prioriteringsregler</option>
+              <option value="negativa-tal">negativa tal</option>
+              <option value="brak">bråk</option>
+              <option value="decimaltal">decimaltal</option>
+              <option value="procent">procent</option>
+              <option value="forhallanden-proportionalitet">förhållanden och proportionalitet</option>
+              <option value="uttryck-ekvationer">enkla uttryck och ekvationer</option>
+              <option value="monster-talfoeljder">mönster och talföljder</option>
+              <option value="geometri-omkrets-area-vinkel-skala">geometri: omkrets, area, vinkel, skala</option>
+              <option value="enheter-omvandlingar">enheter och omvandlingar</option>
+              <option value="koordinatsystem">koordinatsystem</option>
+              <option value="statistik-sannolikhet">statistik och sannolikhet</option>
+              <option value="textuppgifter-vardaglig-kontext">textuppgifter i vardaglig kontext</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="numItems">Antal</label>
+            <select id="numItems" name="numItems">
+              <option value="5">5</option>
+              <option value="10" selected>10</option>
+              <option value="15">15</option>
+              <option value="20">20</option>
+            </select>
+          </div>
+        </div>
+        <button type="button" class="btn-primary top-bar-generate" id="generateBtn">
+          Generera
+        </button>
+      </div>
+
+      <button
+        type="button"
+        class="settings-cog"
+        id="settingsCog"
+        aria-haspopup="dialog"
+        aria-controls="settingsDialog"
+        aria-expanded="false"
+        aria-label="Öppna inställningar"
+        title="Inställningar"
+      >
+        <svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            fill="currentColor"
+            d="M19.43 12.98c.04-.32.07-.64.07-.97 0-.33-.03-.66-.07-1l2.11-1.65a.5.5 0 0 0 .12-.64l-2-3.46a.5.5 0 0 0-.61-.22l-2.49 1a7.97 7.97 0 0 1-1.69-.98l-.38-2.65A.5.5 0 0 0 14 2h-4a.5.5 0 0 0-.49.42l-.38 2.65c-.63.25-1.17.59-1.69.98l-2.49-1a.5.5 0 0 0-.61.22l-2 3.46a.5.5 0 0 0 .12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.97l-2.11 1.65a.5.5 0 0 0-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.06.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.63-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46a.5.5 0 0 0-.12-.64l-2.11-1.65zM12 15.5A3.5 3.5 0 1 1 15.5 12 3.5 3.5 0 0 1 12 15.5z"
+          />
+        </svg>
+      </button>
+    </header>
+
+    <main class="sheet">
+      <h1 class="sheet-title">Dina matteuppgifter</h1>
+      <p class="sheet-hint">
+        Välj nivå, kategori och antal ovan. Klicka på <strong>Generate</strong> för att skapa uppgifter (kommer att anropa LLM).
+      </p>
+      <div id="exerciseOutput" class="exercise-output" aria-live="polite"></div>
+    </main>
+
+    <dialog
+      class="settings-dialog"
+      id="settingsDialog"
+      aria-labelledby="settingsModalTitle"
+    >
+      <div class="settings-modal-inner">
+        <div class="settings-modal-header">
+          <h2 class="settings-modal-title" id="settingsModalTitle">Settings</h2>
+          <button
+            type="button"
+            class="settings-modal-close"
+            id="settingsModalClose"
+            aria-label="Stäng inställningar"
+          >
+            ×
+          </button>
+        </div>
+
+        <details class="settings-details" id="apiKeysDetails">
+          <summary class="settings-details-summary">API keys</summary>
+          <div class="settings-details-body">
+            <div class="settings-section">
+              <label class="settings-section-label" for="openaiKey">OpenAI API Key</label>
+              <input
+                class="settings-input-line"
+                type="password"
+                id="openaiKey"
+                name="openaiKey"
+                autocomplete="off"
+                spellcheck="false"
+                placeholder="sk-..."
+              />
+              <div class="settings-btn-row">
+                <button type="button" class="btn-settings-save" id="saveOpenaiKey">Save Key</button>
+                <button type="button" class="btn-settings-delete" id="deleteOpenaiKey">Delete Key</button>
+              </div>
+            </div>
+
+            <div class="settings-section">
+              <label class="settings-section-label" for="grokKey">Grok API Key</label>
+              <input
+                class="settings-input-line"
+                type="password"
+                id="grokKey"
+                name="grokKey"
+                autocomplete="off"
+                spellcheck="false"
+                placeholder="xai-…"
+              />
+              <div class="settings-btn-row">
+                <button type="button" class="btn-settings-save" id="saveGrokKey">Save Key</button>
+                <button type="button" class="btn-settings-delete" id="deleteGrokKey">Delete Key</button>
+              </div>
+            </div>
+
+            <div class="settings-section">
+              <label class="settings-section-label" for="claudeKey">Claude API Key</label>
+              <input
+                class="settings-input-line"
+                type="password"
+                id="claudeKey"
+                name="claudeKey"
+                autocomplete="off"
+                spellcheck="false"
+                placeholder="sk-ant-…"
+              />
+              <div class="settings-btn-row">
+                <button type="button" class="btn-settings-save" id="saveClaudeKey">Save Key</button>
+                <button type="button" class="btn-settings-delete" id="deleteClaudeKey">Delete Key</button>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <div class="settings-section">
+          <label class="settings-section-label" for="promptText">Prompt</label>
+          <textarea
+            class="settings-textarea settings-textarea--prompt"
+            id="promptText"
+            name="promptText"
+            rows="6"
+            placeholder="Instructions for the model (optional)."
+          ></textarea>
+          <div class="settings-btn-row">
+            <button type="button" class="btn-settings-save" id="savePrompt">Save</button>
+            <button type="button" class="btn-settings-delete" id="deletePrompt">Återställ</button>
+          </div>
+        </div>
+
+        <p class="settings-toast" id="settingsToast" role="status" aria-live="polite"></p>
+      </div>
+    </dialog>
+
+    <script src="app.js"></script>
+  </body>
+</html>
