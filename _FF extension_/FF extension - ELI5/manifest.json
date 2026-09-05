@@ -1,0 +1,38 @@
+{
+  "manifest_version": 2,
+  "name": "ELI5 Explainer",
+  "version": "1.0",
+  "description": "Get simple ELI5 explanations of selected text via Claude AI",
+  "permissions": [
+    "contextMenus",
+    "storage",
+    "notifications",
+    "<all_urls>"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "css": ["content.css"]
+    }
+  ],
+  "background": {
+    "scripts": ["background.js"],
+    "persistent": false
+  },
+  "commands": {
+    "eli5-explain": {
+      "suggested_key": { "default": "Ctrl+Alt+Z" },
+      "description": "ELI5: Explain selection"
+    }
+  },
+  "icons": {
+    "48": "icon.svg",
+    "96": "icon.svg"
+  },
+  "browser_action": {
+    "default_icon": "icon.svg",
+    "default_popup": "popup.html",
+    "default_title": "ELI5 Settings"
+  }
+}
